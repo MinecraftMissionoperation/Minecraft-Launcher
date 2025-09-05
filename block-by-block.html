@@ -2,10 +2,10 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Block by Block – Full Version</title>
+<title>Block by Block – Full Band Version</title>
 </head>
 <body>
-<h1>🎵 Block by Block – Full Version</h1>
+<h1>🎵 Block by Block – Full Band</h1>
 <button onclick="playSong()">Play Song</button>
 
 <script>
@@ -41,7 +41,7 @@ const outro = [
   ["C4","C","C3",0.5],["E4","C","C3",0.5],["G4","C","C3",1.0]
 ];
 
-// Play a pitched tone
+// Play pitched tone
 function playTone(ctx, freq, dur, start, type="sine", vol=0.2) {
   if (freq===0) return;
   const osc = ctx.createOscillator();
@@ -51,7 +51,6 @@ function playTone(ctx, freq, dur, start, type="sine", vol=0.2) {
   osc.connect(gain);
   gain.connect(ctx.destination);
 
-  // Smooth envelope
   gain.gain.setValueAtTime(0, start);
   gain.gain.linearRampToValueAtTime(vol, start+0.02);
   gain.gain.linearRampToValueAtTime(vol*0.8, start+dur);
@@ -61,7 +60,7 @@ function playTone(ctx, freq, dur, start, type="sine", vol=0.2) {
   osc.stop(start+dur+0.05);
 }
 
-// Simple drum sounds
+// Randomised drums
 function playDrum(ctx, type, start, vol=0.3) {
   const osc = ctx.createOscillator();
   const gain = ctx.createGain();
@@ -89,20 +88,19 @@ function playDrum(ctx, type, start, vol=0.3) {
 
 function playSection(ctx, section, dynamics=1.0, t) {
   section.forEach(([mel, chord, bass, dur], i) => {
-    // Melody
-    playTone(ctx, NOTES[mel], dur, t, "sine", 0.3*dynamics);
-    // Chords
-    CHORDS[chord].forEach(n => playTone(ctx, NOTES[n], dur, t, "triangle", 0.15*dynamics));
+    // Melody (lead)
+    playTone(ctx, NOTES[mel], dur, t, "sawtooth", 0.25*dynamics);
+    // Chords (pad)
+    CHORDS[chord].forEach(n => playTone(ctx, NOTES[n], dur*2, t, "triangle", 0.12*dynamics));
     // Bass
-    playTone(ctx, NOTES[bass], dur, t, "square", 0.2*dynamics);
+    playTone(ctx, NOTES[bass], dur, t, "square", 0.18*dynamics);
+    // Extra pluck
+    playTone(ctx, NOTES[mel], 0.25, t, "square", 0.1*dynamics);
 
-    // Beat every half-beat
-    playDrum(ctx, "hihat", t, 0.12*dynamics);
-    if (i % 2 === 0) {
-      playDrum(ctx, "kick", t, 0.3*dynamics);
-    } else {
-      playDrum(ctx, "snare", t, 0.25*dynamics);
-    }
+    // Randomised drums
+    if (Math.random() > 0.3) playDrum(ctx, "hihat", t, 0.12*dynamics);
+    if (Math.random() > 0.7) playDrum(ctx, "kick", t, 0.25*dynamics);
+    if (Math.random() > 0.8) playDrum(ctx, "snare", t, 0.2*dynamics);
 
     t += dur;
   });
@@ -116,9 +114,9 @@ function playSong() {
   // Intro (soft)
   t = playSection(ctx, intro, 0.6, t);
   // Main song (medium)
-  t = playSection(ctx, song, 0.8, t);
+  t = playSection(ctx, song, 0.85, t);
   // Bridge (dip)
-  t = playSection(ctx, bridge, 0.7, t);
+  t = playSection(ctx, bridge, 0.75, t);
   // Main song again (full)
   t = playSection(ctx, song, 1.0, t);
   // Outro (fade)
