@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Block by Block – Extended</title>
+</head>
+<body>
+  <h1>🎵 Block by Block – Extended Version</h1>
+  <button onclick="playSong()">Play Song</button>
+
+  <script>
+    const NOTES = {
+      "C4": 261.63, "D4": 293.66, "E4": 329.63, "F4": 349.23,
+      "G4": 392.00, "A4": 440.00, "B4": 493.88,
+      "C3": 130.81, "D3": 146.83, "E3": 164.81, "F3": 174.61,
+      "G3": 196.00, "A3": 220.00, "B3": 246.94,
+      "REST": 0
+    };
+
+    const CHORDS = {
+      "C": ["C4", "E4", "G4"],
+      "F": ["F4", "A4", "C4"],
+      "G": ["G4", "B4", "D4"],
+      "Am": ["A4", "C4", "E4"]
+    };
+
+    // Extended song: [melodyNote, chordName, bassNote, duration]
+    const song = [
+      // Verse
+      ["C4","C","C3",0.5],["C4","C","C3",0.5],["E4","C","C3",0.5],["G4","C","C3",0.5],
+      ["G4","F","F3",0.5],["E4","F","F3",0.5],["D4","G","G3",0.5],["C4","G","G3",0.5],
+      ["E4","Am","A3",0.5],["E4","Am","A3",0.5],["G4","F","F3",0.5],["A4","F","F3",0.5],
+      ["G4","C","C3",0.5],["E4","C","C3",0.5],["D4","G","G3",0.5],["C4","G","G3",0.5],
+
+      // Chorus
+      ["C4","C","C3",0.5],["E4","C","C3",0.5],["G4","C","C3",0.5],["G4","C","C3",0.5],
+      ["A4","F","F3",0.5],["G4","F","F3",0.5],["E4","G","G3",0.5],["D4","G","G3",0.5],
+      ["E4","Am","A3",0.5],["G4","Am","A3",0.5],["A4","F","F3",0.5],["G4","F","F3",0.5],
+      ["E4","C","C3",0.5],["D4","C","C3",0.5],["C4","G","G3",1.0]
+    ];
+
+    function playTone(audioCtx, frequency, duration, startTime, type="sine", volume=0.2) {
+      if (frequency === 0) return;
+      const osc = audioCtx.createOscillator();
+      const gainNode = audioCtx.createGain();
+      osc.type = type;
+      osc.frequency.value = frequency;
+      osc.connect(gainNode);
+      gainNode.connect(audioCtx.destination);
+      gainNode.gain.setValueAtTime(volume, startTime);
+      gainNode.gain.exponentialRampToValueAtTime(0.001, startTime + duration);
+      osc.start(startTime);
+      osc.stop(startTime + duration);
+    }
+
+    function playDrum(audioCtx, type, startTime, volume=0.3) {
+      const osc = audioCtx.createOscillator();
+      const gainNode = audioCtx.createGain();
+      osc.connect(gainNode);
+      gainNode.connect(audioCtx.destination);
+
+      if (type === "kick") {
+        osc.type = "sine";
+        osc.frequency.setValueAtTime(150, startTime);
+        osc.frequency.exponentialRampToValueAtTime(50, startTime + 0.5);
+      } else if (type === "snare") {
+        osc.type = "triangle";
+        osc.frequency.setValueAtTime(200, startTime);
+      } else if (type === "hihat") {
+        osc.type = "square";
+        osc.frequency.setValueAtTime(400, startTime);
+      }
+
+      gainNode.gain.setValueAtTime(volume, startTime);
+      gainNode.gain.exponentialRampToValueAtTime(0.001, startTime + 0.2);
+      osc.start(startTime);
+      osc.stop(startTime + 0.2);
+    }
+
+    function playSong() {
+      const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      let currentTime = audioCtx.currentTime;
+      let beatCounter = 0;
+
+      song.forEach(([melodyNote, chordName, bassNote, dur]) => {
+        // Melody
+        playTone(audioCtx, NOTES[melodyNote], dur, currentTime, "sine", 0.3);
+
+        // Chords
+        CHORDS[chordName].forEach(note => {
+          playTone(audioCtx, NOTES[note], dur, currentTime, "triangle", 0.15);
+        });
+
+        // Bass
+        playTone(audioCtx, NOTES[bassNote], dur, currentTime, "square", 0.2);
+
+        // Drums (kick on beat 1, snare on beat 3, hi-hat every beat)
+        if (beatCounter % 4 === 0) playDrum(audioCtx, "kick", currentTime, 0.4);
+        if (beatCounter % 4 === 2) playDrum(audioCtx, "snare", currentTime, 0.3);
+        playDrum(audioCtx, "hihat", currentTime, 0.15);
+
+        currentTime += dur;
+        beatCounter++;
+      });
+    }
+  </script>
+</body>
+</html>
