@@ -1,108 +1,502 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <meta charset="UTF-8">
-  <title>Block by Block – Extended</title>
+  <meta charset="UTF-8" />
+  <title>Block by Block — Full Arrangement</title>
+  <style>
+    body { font-family: system-ui, Arial, sans-serif; background:#0e0f12; color:#e7e9ee; padding: 24px; }
+    h1 { margin: 0 0 8px; }
+    .controls { display:flex; gap:12px; align-items:center; flex-wrap:wrap; margin: 16px 0 24px; }
+    button { background:#1f6feb; color:white; border:none; padding:10px 16px; border-radius:8px; cursor:pointer; font-weight:600; }
+    button:disabled { opacity:0.5; cursor:not-allowed; }
+    select { background:#15171c; color:#e7e9ee; border:1px solid #2b2f36; border-radius:8px; padding:8px 12px; }
+    .hint { color:#9aa4b2; font-size:14px; margin-top:6px; }
+    .meter { height: 8px; background:#1a1d23; border-radius:4px; overflow:hidden; width:260px; }
+    .meter > div { height:100%; background:#3fb950; width:0%; transition: width 0.1s linear; }
+    .grid { display:grid; grid-template-columns: auto 1fr; gap:6px 14px; max-width:680px; }
+    .label { color:#9aa4b2; }
+    .badge { background:#21262d; color:#c9d1d9; padding:2px 8px; border-radius:999px; font-size:12px; }
+  </style>
 </head>
 <body>
-  <h1>🎵 Block by Block – Extended Version</h1>
-  <button onclick="playSong()">Play Song</button>
+  <h1>🎵 Block by Block — Cinematic Web Audio Mix</h1>
+  <div class="controls">
+    <button id="playBtn">Play</button>
+    <button id="stopBtn" disabled>Stop</button>
+    <label>
+      <span class="badge">Start at</span>
+      <select id="sectionSelect">
+        <option value="Intro">Intro</option>
+        <option value="Verse1">Verse 1</option>
+        <option value="PreChorus">Pre-chorus</option>
+        <option value="Chorus">Chorus</option>
+        <option value="Verse2">Verse 2</option>
+        <option value="Bridge">Bridge</option>
+        <option value="ChorusFinal">Final Chorus</option>
+        <option value="Outro">Outro</option>
+      </select>
+    </label>
+    <div class="grid">
+      <div class="label">Tempo</div> <div id="tempoLabel" class="badge">100 BPM</div>
+      <div class="label">Section</div> <div id="nowPlaying" class="badge">—</div>
+      <div class="label">Level</div>
+      <div class="meter"><div id="meterFill"></div></div>
+    </div>
+  </div>
+  <div class="hint">Tip: Leave this tab in the foreground on mobile so audio keeps playing smoothly.</div>
 
   <script>
-    const NOTES = {
-      "C4": 261.63, "D4": 293.66, "E4": 329.63, "F4": 349.23,
-      "G4": 392.00, "A4": 440.00, "B4": 493.88,
-      "C3": 130.81, "D3": 146.83, "E3": 164.81, "F3": 174.61,
-      "G3": 196.00, "A3": 220.00, "B3": 246.94,
-      "REST": 0
+    // ========= Music settings =========
+    const BPM = 100;                 // base tempo
+    const BEAT = 60 / BPM;           // seconds per beat
+    const MEASURE = BEAT * 4;        // 4/4 time
+    document.getElementById('tempoLabel').textContent = `${BPM} BPM`;
+
+    // Scale frequencies (A4=440)
+    const FREQ = {
+      "C2":65.41,"D2":73.42,"E2":82.41,"F2":87.31,"G2":98.00,"A2":110.00,"B2":123.47,
+      "C3":130.81,"D3":146.83,"E3":164.81,"F3":174.61,"G3":196.00,"A3":220.00,"B3":246.94,
+      "C4":261.63,"D4":293.66,"E4":329.63,"F4":349.23,"G4":392.00,"A4":440.00,"B4":493.88,
+      "C5":523.25,"D5":587.33,"E5":659.25,"F5":698.46,"G5":783.99,"A5":880.00,"B5":987.77,
+      "REST":0
     };
 
+    // Chords for harmony (triads; we’ll invert on the fly sometimes)
     const CHORDS = {
-      "C": ["C4", "E4", "G4"],
-      "F": ["F4", "A4", "C4"],
-      "G": ["G4", "B4", "D4"],
-      "Am": ["A4", "C4", "E4"]
+      C: ["C4","E4","G4"],
+      F: ["F4","A4","C5"],
+      G: ["G3","B3","D4"],
+      Am:["A3","C4","E4"],
+      Em:["E3","G3","B3"]
     };
 
-    // Extended song: [melodyNote, chordName, bassNote, duration]
-    const song = [
-      // Verse
-      ["C4","C","C3",0.5],["C4","C","C3",0.5],["E4","C","C3",0.5],["G4","C","C3",0.5],
-      ["G4","F","F3",0.5],["E4","F","F3",0.5],["D4","G","G3",0.5],["C4","G","G3",0.5],
-      ["E4","Am","A3",0.5],["E4","Am","A3",0.5],["G4","F","F3",0.5],["A4","F","F3",0.5],
-      ["G4","C","C3",0.5],["E4","C","C3",0.5],["D4","G","G3",0.5],["C4","G","G3",0.5],
+    // ========= Web Audio engine =========
+    let ctx, master, limiter, comp, widthNode, lowpass, meterGain, meterFillRAF;
+    let delaySend, delayNode, delayFeedback, delayFilter;
+    let reverbSend, revA, revB, revC, revMix;
+    let playing = false;
+    let stopRequested = false;
 
-      // Chorus
-      ["C4","C","C3",0.5],["E4","C","C3",0.5],["G4","C","C3",0.5],["G4","C","C3",0.5],
-      ["A4","F","F3",0.5],["G4","F","F3",0.5],["E4","G","G3",0.5],["D4","G","G3",0.5],
-      ["E4","Am","A3",0.5],["G4","Am","A3",0.5],["A4","F","F3",0.5],["G4","F","F3",0.5],
-      ["E4","C","C3",0.5],["D4","C","C3",0.5],["C4","G","G3",1.0]
-    ];
+    function initAudio() {
+      ctx = new (window.AudioContext || window.webkitAudioContext)();
 
-    function playTone(audioCtx, frequency, duration, startTime, type="sine", volume=0.2) {
-      if (frequency === 0) return;
-      const osc = audioCtx.createOscillator();
-      const gainNode = audioCtx.createGain();
-      osc.type = type;
-      osc.frequency.value = frequency;
-      osc.connect(gainNode);
-      gainNode.connect(audioCtx.destination);
-      gainNode.gain.setValueAtTime(volume, startTime);
-      gainNode.gain.exponentialRampToValueAtTime(0.001, startTime + duration);
-      osc.start(startTime);
-      osc.stop(startTime + duration);
+      // Master chain: sources -> [effects] -> compressor -> limiter -> master -> destination
+      master = ctx.createGain(); master.gain.value = 0.9;
+
+      comp = ctx.createDynamicsCompressor();
+      comp.threshold.value = -24; comp.knee.value = 20; comp.ratio.value = 3; comp.attack.value = 0.005; comp.release.value = 0.25;
+
+      // Gentle "limiter"
+      limiter = ctx.createDynamicsCompressor();
+      limiter.threshold.value = -6; limiter.knee.value = 0; limiter.ratio.value = 20; limiter.attack.value = 0.003; limiter.release.value = 0.15;
+
+      widthNode = ctx.createStereoPanner(); // We'll modulate subtly for width tricks
+      lowpass = ctx.createBiquadFilter(); lowpass.type="lowpass"; lowpass.frequency.value = 16000;
+
+      // Delay send
+      delaySend = ctx.createGain(); delaySend.gain.value = 0.25;
+      delayNode = ctx.createDelay(1.0); delayNode.delayTime.value = BEAT * 3/4; // dotted feel
+      delayFeedback = ctx.createGain(); delayFeedback.gain.value = 0.35;
+      delayFilter = ctx.createBiquadFilter(); delayFilter.type="lowpass"; delayFilter.frequency.value = 3500;
+      delaySend.connect(delayNode); delayNode.connect(delayFeedback); delayFeedback.connect(delayFilter); delayFilter.connect(delayNode);
+      delayNode.connect(master);
+
+      // Simple reverb-ish (multi-tap feedback)
+      reverbSend = ctx.createGain(); reverbSend.gain.value = 0.18;
+      revA = ctx.createDelay(0.25); revA.delayTime.value = 0.12;
+      revB = ctx.createDelay(0.25); revB.delayTime.value = 0.19;
+      revC = ctx.createDelay(0.25); revC.delayTime.value = 0.27;
+      revMix = ctx.createGain(); revMix.gain.value = 0.4;
+      reverbSend.connect(revA); reverbSend.connect(revB); reverbSend.connect(revC);
+      revA.connect(revMix); revB.connect(revMix); revC.connect(revMix);
+      revMix.connect(master);
+
+      // Meter (post-limiter)
+      meterGain = ctx.createGain(); meterGain.gain.value = 1;
+
+      // Connect chain
+      master.connect(comp);
+      comp.connect(limiter);
+      limiter.connect(widthNode);
+      widthNode.connect(lowpass);
+      lowpass.connect(meterGain);
+      meterGain.connect(ctx.destination);
+
+      // Visual meter
+      const meterFill = document.getElementById('meterFill');
+      const analyser = ctx.createAnalyser();
+      analyser.fftSize = 256;
+      const data = new Uint8Array(analyser.frequencyBinCount);
+      meterGain.connect(analyser);
+      const draw = () => {
+        analyser.getByteTimeDomainData(data);
+        let peak = 0;
+        for (let i=0;i<data.length;i++){
+          const v = (data[i]-128)/128;
+          peak = Math.max(peak, Math.abs(v));
+        }
+        meterFill.style.width = Math.min(100, Math.round(peak*140)) + '%';
+        meterFillRAF = requestAnimationFrame(draw);
+      };
+      draw();
     }
 
-    function playDrum(audioCtx, type, startTime, volume=0.3) {
-      const osc = audioCtx.createOscillator();
-      const gainNode = audioCtx.createGain();
-      osc.connect(gainNode);
-      gainNode.connect(audioCtx.destination);
-
-      if (type === "kick") {
-        osc.type = "sine";
-        osc.frequency.setValueAtTime(150, startTime);
-        osc.frequency.exponentialRampToValueAtTime(50, startTime + 0.5);
-      } else if (type === "snare") {
-        osc.type = "triangle";
-        osc.frequency.setValueAtTime(200, startTime);
-      } else if (type === "hihat") {
-        osc.type = "square";
-        osc.frequency.setValueAtTime(400, startTime);
-      }
-
-      gainNode.gain.setValueAtTime(volume, startTime);
-      gainNode.gain.exponentialRampToValueAtTime(0.001, startTime + 0.2);
-      osc.start(startTime);
-      osc.stop(startTime + 0.2);
+    function env(gn, t0, a=0.01, d=0.08, s=0.6, r=0.2, peak=0.9, sustain=0.3) {
+      gn.gain.cancelScheduledValues(t0);
+      gn.gain.setValueAtTime(0.0001, t0);
+      gn.gain.exponentialRampToValueAtTime(peak, t0+a);
+      gn.gain.exponentialRampToValueAtTime(sustain, t0+a+d);
+      gn.gain.exponentialRampToValueAtTime(0.0001, t0+a+d+r);
     }
 
-    function playSong() {
-      const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-      let currentTime = audioCtx.currentTime;
-      let beatCounter = 0;
+    // --- Instruments ---
+    function playLead(freq, dur, t0, opts={}) {
+      if (!freq) return;
+      const osc = ctx.createOscillator();
+      const g = ctx.createGain();
+      const dSend = ctx.createGain();
+      dSend.gain.value = (opts.delay || 0.3);
 
-      song.forEach(([melodyNote, chordName, bassNote, dur]) => {
-        // Melody
-        playTone(audioCtx, NOTES[melodyNote], dur, currentTime, "sine", 0.3);
+      osc.type = 'sawtooth';
+      osc.frequency.setValueAtTime(freq, t0);
 
-        // Chords
-        CHORDS[chordName].forEach(note => {
-          playTone(audioCtx, NOTES[note], dur, currentTime, "triangle", 0.15);
-        });
+      // simple filter for tone
+      const f = ctx.createBiquadFilter(); f.type='lowpass'; f.frequency.setValueAtTime(4800, t0);
 
-        // Bass
-        playTone(audioCtx, NOTES[bassNote], dur, currentTime, "square", 0.2);
+      // subtle vibrato
+      const vib = ctx.createOscillator(); vib.frequency.value = 5.2;
+      const vibGain = ctx.createGain(); vibGain.gain.value = 8; // cents-ish
+      vib.connect(vibGain); vibGain.connect(osc.frequency);
 
-        // Drums (kick on beat 1, snare on beat 3, hi-hat every beat)
-        if (beatCounter % 4 === 0) playDrum(audioCtx, "kick", currentTime, 0.4);
-        if (beatCounter % 4 === 2) playDrum(audioCtx, "snare", currentTime, 0.3);
-        playDrum(audioCtx, "hihat", currentTime, 0.15);
+      // chain
+      osc.connect(f); f.connect(g);
+      g.connect(master);
+      g.connect(delaySend);
+      g.connect(reverbSend);
+      g.connect(dSend); dSend.connect(delaySend);
 
-        currentTime += dur;
-        beatCounter++;
+      env(g, t0, 0.01, 0.06, 0.5, Math.max(0.15, dur*0.6), 0.9, 0.25);
+
+      osc.start(t0); vib.start(t0);
+      osc.stop(t0+dur+0.4); vib.stop(t0+dur+0.4);
+    }
+
+    function playPad(notes, dur, t0, opts={}) {
+      const g = ctx.createGain();
+      const f = ctx.createBiquadFilter(); f.type="lowpass"; f.frequency.setValueAtTime(opts.cutoff || 2400, t0);
+      g.connect(master); g.connect(reverbSend);
+      const vol = opts.vol || 0.18;
+      notes.forEach((n,i)=>{
+        const freq = FREQ[n]; if (!freq) return;
+        const o = ctx.createOscillator();
+        const lfo = ctx.createOscillator(); lfo.frequency.value = 0.1 + i*0.07;
+        const lfoGain = ctx.createGain(); lfoGain.gain.value = 20 + i*10;
+        lfo.connect(lfoGain); lfoGain.connect(frequencyParam(o));
+        o.type = 'triangle';
+        o.frequency.setValueAtTime(freq*(i===1?1.005:1), t0);
+        o.connect(f); f.connect(g);
+        env(g, t0, 0.05, 0.4, 0.8, Math.max(0.4, dur*0.9), vol, 0.6);
+        o.start(t0); lfo.start(t0);
+        o.stop(t0+dur+1.0); lfo.stop(t0+dur+1.0);
       });
     }
+
+    function frequencyParam(osc){
+      // handle different oscillator APIs
+      return (osc.frequency && osc.frequency) || osc;
+    }
+
+    function playBass(freq, dur, t0, opts={}) {
+      if (!freq) return;
+      const o = ctx.createOscillator();
+      const g = ctx.createGain();
+      const f = ctx.createBiquadFilter(); f.type='lowpass'; f.frequency.setValueAtTime(600, t0);
+      o.type = 'square';
+      o.frequency.setValueAtTime(freq/2, t0); // sub
+      o.connect(f); f.connect(g);
+      g.connect(master);
+      env(g, t0, 0.005, 0.06, 0.6, Math.max(0.15, dur*0.5), (opts.vol||0.28), 0.25);
+      o.start(t0); o.stop(t0+dur+0.3);
+    }
+
+    // --- Drums ---
+    function kick(t0, vol=0.9){
+      const o = ctx.createOscillator();
+      const g = ctx.createGain();
+      o.type='sine';
+      o.frequency.setValueAtTime(160, t0);
+      o.frequency.exponentialRampToValueAtTime(45, t0+0.12);
+      g.gain.setValueAtTime(vol, t0);
+      g.gain.exponentialRampToValueAtTime(0.0001, t0+0.25);
+      o.connect(g); g.connect(master);
+      o.start(t0); o.stop(t0+0.3);
+      // Sidechain duck pad a bit (pseudo)
+      master.gain.cancelScheduledValues(t0);
+      master.gain.setTargetAtTime(0.88, t0, 0.01);
+      master.gain.setTargetAtTime(0.9, t0+0.08, 0.08);
+    }
+    function snare(t0, vol=0.6){
+      // noise burst + body tone
+      const noise = ctx.createBufferSource();
+      const buffer = ctx.createBuffer(1, ctx.sampleRate*0.2, ctx.sampleRate);
+      const data = buffer.getChannelData(0);
+      for (let i=0;i<data.length;i++) data[i] = (Math.random()*2-1)*Math.pow(1-i/data.length, 2.5);
+      noise.buffer = buffer;
+
+      const g = ctx.createGain(); g.gain.value = vol;
+      const hp = ctx.createBiquadFilter(); hp.type='highpass'; hp.frequency.value = 1800;
+      noise.connect(hp); hp.connect(g); g.connect(master);
+
+      const tone = ctx.createOscillator(); tone.type='triangle'; tone.frequency.value = 190;
+      const tg = ctx.createGain(); tg.gain.value = vol*0.3; tone.connect(tg); tg.connect(master);
+
+      g.gain.setValueAtTime(vol, t0);
+      g.gain.exponentialRampToValueAtTime(0.0001, t0+0.18);
+      tg.gain.setValueAtTime(vol*0.3, t0);
+      tg.gain.exponentialRampToValueAtTime(0.0001, t0+0.12);
+
+      noise.start(t0); noise.stop(t0+0.2);
+      tone.start(t0); tone.stop(t0+0.15);
+    }
+    function hihat(t0, vol=0.25, open=false){
+      const noise = ctx.createBufferSource();
+      const len = open ? 0.25 : 0.06;
+      const buffer = ctx.createBuffer(1, ctx.sampleRate*len, ctx.sampleRate);
+      const data = buffer.getChannelData(0);
+      for (let i=0;i<data.length;i++) data[i] = Math.random()*2-1;
+      noise.buffer = buffer;
+
+      const g = ctx.createGain(); g.gain.value = vol;
+      const hp = ctx.createBiquadFilter(); hp.type='highpass'; hp.frequency.value = 6000;
+      noise.connect(hp); hp.connect(g); g.connect(master);
+
+      g.gain.setValueAtTime(vol, t0);
+      g.gain.exponentialRampToValueAtTime(0.0001, t0 + (open?0.25:0.07));
+      noise.start(t0); noise.stop(t0 + (open?0.25:0.08));
+    }
+    function tom(t0, pitch=140, vol=0.5){
+      const o = ctx.createOscillator(); o.type='sine';
+      const g = ctx.createGain();
+      o.frequency.setValueAtTime(pitch, t0);
+      o.frequency.exponentialRampToValueAtTime(pitch*0.6, t0+0.1);
+      g.gain.setValueAtTime(vol, t0);
+      g.gain.exponentialRampToValueAtTime(0.0001, t0+0.3);
+      o.connect(g); g.connect(master);
+      o.start(t0); o.stop(t0+0.35);
+    }
+
+    // ========= Music content =========
+    // Helper: schedule a bar of drums with pattern
+    function drumPattern(t0, pattern, intensity=1.0) {
+      // pattern: object with arrays of beats relative to bar start (0..3)
+      (pattern.kick||[]).forEach(b => kick(t0 + b*BEAT, 0.8*intensity));
+      (pattern.snare||[]).forEach(b => snare(t0 + b*BEAT, 0.55*intensity));
+      (pattern.hhC||[]).forEach(b => hihat(t0 + b*BEAT, 0.22*intensity, false));
+      (pattern.hhO||[]).forEach(b => hihat(t0 + b*BEAT, 0.3*intensity, true));
+      (pattern.fill||[]).forEach(({at, type}) => {
+        if (type==="tom") tom(t0 + at*BEAT, 180, 0.55*intensity);
+        if (type==="tomL") tom(t0 + at*BEAT, 120, 0.6*intensity);
+        if (type==="snare") snare(t0 + at*BEAT, 0.7*intensity);
+      });
+    }
+
+    // Drum patterns per section
+    const DRUMS = {
+      intro:   { kick:[0,2], snare:[1.5,3.5], hhC:[0,0.5,1,1.5,2,2.5,3,3.5] },
+      verse:   { kick:[0,2.5], snare:[1.5,3.5], hhC:[0,0.5,1,1.5,2,2.5,3,3.5] },
+      pre:     { kick:[0,2], snare:[1.5,3.5], hhC:[0,1,2,3], hhO:[3.75] },
+      chorus:  { kick:[0,1.5,2.5,3.5], snare:[1,3], hhC:[0,0.5,1,1.5,2,2.5,3,3.5], hhO:[3.75] },
+      bridge:  { kick:[0,2], snare:[1.5,3.5], hhC:[0,1,2,3], fill:[{at:3.25,type:"tom"},{at:3.5,type:"tomL"},{at:3.75,type:"snare"}] },
+      fillbar: { kick:[0,2], snare:[1,3], hhC:[0,0.5,1,1.5,2,2.5,3,3.5], fill:[{at:3.25,type:"tom"},{at:3.5,type:"tom"},{at:3.75,type:"tomL"}] }
+    };
+
+    // Progressions per section (each item => 1 bar)
+    const PROG = {
+      Intro:   ["C","Am","F","G"],
+      Verse:   ["C","Am","F","G","C","Am","F","G"],
+      Pre:     ["Am","G","F","G"],
+      Chorus:  ["C","G","Am","F","C","G","F","G"],
+      Verse2:  ["C","Am","F","G","C","Am","F","G"],
+      Bridge:  ["Am","Em","F","G","Am","Em","F","G"],
+      ChorusF: ["C","G","Am","F","C","G","F","G"],
+      Outro:   ["C","F","C","G","C"]
+    };
+
+    // Lead melodies (anchor notes by bar; keep it singable)
+    const LEAD = {
+      Intro: [
+        ["E4","G4","A4","G4"], ["E4","G4","A4","G4"], ["F4","A4","C5","A4"], ["D4","G4","B4","A4"]
+      ],
+      Verse: [
+        ["C4","C4","E4","G4"], ["G4","E4","D4","C4"], ["E4","E4","G4","A4"], ["G4","E4","D4","C4"],
+        ["C4","E4","G4","G4"], ["A4","G4","E4","D4"], ["E4","G4","A4","G4"], ["E4","D4","C4","REST"]
+      ],
+      Pre: [
+        ["E4","G4","A4","G4"], ["E4","G4","A4","G4"], ["F4","A4","C5","A4"], ["D4","G4","B4","A4"]
+      ],
+      Chorus: [
+        ["C4","E4","G4","G4"], ["A4","G4","E4","D4"], ["E4","G4","A4","G4"], ["E4","D4","C4","REST"],
+        ["C4","E4","G4","G4"], ["A4","G4","E4","D4"], ["F4","A4","C5","A4"], ["E4","D4","C4","REST"]
+      ],
+      Verse2: [
+        ["C4","C4","E4","G4"], ["G4","E4","D4","C4"], ["E4","E4","G4","A4"], ["G4","E4","D4","C4"],
+        ["C4","E4","G4","G4"], ["A4","G4","E4","D4"], ["E4","G4","A4","G4"], ["E4","D4","C4","REST"]
+      ],
+      Bridge: [
+        ["A4","C5","B4","A4"], ["G4","B4","A4","G4"], ["F4","A4","G4","F4"], ["E4","G4","F4","E4"],
+        ["A4","C5","B4","A4"], ["G4","B4","A4","G4"], ["F4","A4","G4","F4"], ["E4","G4","F4","E4"]
+      ],
+      ChorusF: [
+        ["C4","E4","G4","G4"], ["A4","G4","E4","D4"], ["E4","G4","A4","G4"], ["E4","D4","C4","REST"],
+        ["C4","E4","G4","G4"], ["A4","G4","E4","D4"], ["F4","A4","C5","A4"], ["E4","D4","C4","C5"]
+      ],
+      Outro: [
+        ["E4","G4","A4","G4"], ["F4","A4","C5","A4"], ["E4","G4","C5","REST"], ["D4","G4","B4","A4"], ["C4","REST","REST","REST"]
+      ]
+    };
+
+    // Bass per bar: root notes
+    function bassForChord(ch) {
+      const map = {C:"C2", F:"F2", G:"G2", Am:"A2", Em:"E2"};
+      return map[ch] || "C2";
+    }
+
+    // Schedule a section
+    function scheduleSection(name, startTime, opts={}) {
+      const progKey = (name==="Verse1"?"Verse": name==="ChorusFinal"?"ChorusF" : name);
+      const chords = PROG[progKey];
+      const leads = LEAD[progKey];
+
+      const drum = (progKey==="Intro")?DRUMS.intro:
+                   (progKey==="Verse"||progKey==="Verse2")?DRUMS.verse:
+                   (progKey==="Pre")?DRUMS.pre:
+                   (progKey==="Chorus"||progKey==="ChorusF")?DRUMS.chorus:
+                   (progKey==="Bridge")?DRUMS.bridge: DRUMS.fillbar;
+
+      const intensity =
+        (progKey==="Intro")?0.8:
+        (progKey==="Verse"||progKey==="Verse2")?0.9:
+        (progKey==="Pre")?1.0:
+        (progKey==="Bridge")?0.95:
+        (progKey==="Chorus"||progKey==="ChorusF")?1.1: 0.8;
+
+      const padCutoff =
+        (progKey==="Intro")?1800:
+        (progKey==="Verse"||progKey==="Verse2")?2200:
+        (progKey==="Pre")?2800:
+        (progKey==="Bridge")?2000:
+        (progKey==="Chorus"||progKey==="ChorusF")?3500: 1800;
+
+      const barCount = chords.length;
+      let t = startTime;
+
+      // Subtle width sweep over section
+      const pan = ctx.createStereoPanner();
+      pan.pan.setValueAtTime(-0.1, t);
+      pan.pan.linearRampToValueAtTime(0.1, t + barCount*MEASURE);
+      master.disconnect();
+      master.connect(pan); pan.connect(comp);
+
+      // LPF open for lift
+      lowpass.frequency.cancelScheduledValues(t);
+      lowpass.frequency.setTargetAtTime( padCutoff + 8000, t, 0.5 );
+
+      for (let i=0;i<barCount;i++){
+        const chordName = chords[i];
+        const chordNotes = CHORDS[chordName];
+        const leadBar = leads[i];
+        // Drums
+        drumPattern(t, (i===barCount-1 && (progKey==="Pre"||progKey==="Bridge"))?DRUMS.fillbar:drum, intensity);
+
+        // Pad chords (whole-bar)
+        playPad(chordNotes, MEASURE*0.98, t, {cutoff: padCutoff, vol: (progKey.includes("Chorus")?0.22:0.18)});
+
+        // Bass: 2 notes per bar (root on 1, 5th on 3 for movement)
+        const bassRoot = bassForChord(chordName);
+        const fifthMap = {C:"G2", F:"C3", G:"D3", Am:"E3", Em:"B2"};
+        const bassFifth = fifthMap[chordName] || "G2";
+        playBass(FREQ[bassRoot], BEAT*1.2, t);
+        playBass(FREQ[bassFifth], BEAT*1.2, t + 2*BEAT, {vol:0.24});
+
+        // Lead: four eighth-notes per bar
+        for (let s=0;s<4;s++){
+          const n = leadBar[s];
+          const d = BEAT*0.95;
+          const ts = t + s*(BEAT); // eighth-note-ish feel
+          const freq = FREQ[n];
+          if (n !== "REST") playLead(freq, d, ts, {delay: progKey.includes("Chorus")?0.35:0.28});
+        }
+
+        t += MEASURE;
+      }
+
+      return t; // next start time
+    }
+
+    function buildArrangement(startAt="Intro"){
+      const order = ["Intro","Verse1","PreChorus","Chorus","Verse2","Bridge","ChorusFinal","Outro"];
+      // Map friendly names to our schedule keys
+      const map = {
+        Intro:"Intro",
+        Verse1:"Verse1",
+        PreChorus:"Pre",
+        Chorus:"Chorus",
+        Verse2:"Verse2",
+        Bridge:"Bridge",
+        ChorusFinal:"ChorusFinal",
+        Outro:"Outro"
+      };
+      const startIndex = order.indexOf(startAt);
+      return order.slice(startIndex).map(n => map[n]);
+    }
+
+    // ========= Playback controls =========
+    const playBtn = document.getElementById('playBtn');
+    const stopBtn = document.getElementById('stopBtn');
+    const sectionSelect = document.getElementById('sectionSelect');
+    const nowPlaying = document.getElementById('nowPlaying');
+
+    playBtn.addEventListener('click', async () => {
+      if (!ctx) initAudio();
+      await ctx.resume();
+      stopRequested = false;
+      playing = true;
+      playBtn.disabled = true;
+      stopBtn.disabled = false;
+
+      const arrangement = buildArrangement(sectionSelect.value);
+      let t = ctx.currentTime + 0.1;
+      for (const sec of arrangement) {
+        if (stopRequested) break;
+        nowPlaying.textContent = sec;
+        t = scheduleSection(sec, t);
+      }
+      // small tail
+      const endAt = t + 0.5;
+      setTimeout(() => {
+        if (!stopRequested) {
+          playing = false;
+          playBtn.disabled = false;
+          stopBtn.disabled = true;
+          nowPlaying.textContent = '—';
+        }
+      }, (endAt - ctx.currentTime)*1000 + 100);
+    });
+
+    stopBtn.addEventListener('click', () => {
+      stopRequested = true;
+      playing = false;
+      playBtn.disabled = false;
+      stopBtn.disabled = true;
+      nowPlaying.textContent = '—';
+      if (ctx && ctx.state !== 'closed') {
+        // Hard stop: close context and cancel meter
+        try { ctx.close(); } catch(e){}
+        ctx = null;
+      }
+      if (meterFillRAF) cancelAnimationFrame(meterFillRAF);
+      document.getElementById('meterFill').style.width = '0%';
+    });
   </script>
 </body>
 </html>
