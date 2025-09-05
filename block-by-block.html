@@ -2,10 +2,10 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Block by Block – Smooth & Dynamic</title>
+<title>Block by Block – Full Version</title>
 </head>
 <body>
-<h1>🎵 Block by Block – Smooth & Dynamic</h1>
+<h1>🎵 Block by Block – Full Version</h1>
 <button onclick="playSong()">Play Song</button>
 
 <script>
@@ -22,7 +22,7 @@ const CHORDS = {
   "Am":["A4","C4","E4"]
 };
 
-// Original melody + chords + bass (kept exactly as before)
+// Original melody section
 const song = [
   ["C4","C","C3",0.5],["C4","C","C3",0.5],["E4","C","C3",0.5],["G4","C","C3",0.5],
   ["G4","F","F3",0.5],["E4","F","F3",0.5],["D4","G","G3",0.5],["C4","G","G3",0.5],
@@ -30,7 +30,7 @@ const song = [
   ["G4","C","C3",0.5],["E4","C","C3",0.5],["D4","G","G3",0.5],["C4","G","G3",1.0]
 ];
 
-// Extra parts for intro, bridge, outro (same harmonic style)
+// Extra sections
 const intro = [
   ["E4","C","C3",0.5],["G4","C","C3",0.5],["A4","F","F3",0.5],["G4","F","F3",0.5]
 ];
@@ -41,21 +41,17 @@ const outro = [
   ["C4","C","C3",0.5],["E4","C","C3",0.5],["G4","C","C3",1.0]
 ];
 
+// Play a pitched tone
 function playTone(ctx, freq, dur, start, type="sine", vol=0.2) {
   if (freq===0) return;
   const osc = ctx.createOscillator();
   const gain = ctx.createGain();
-  const filter = ctx.createBiquadFilter();
-  filter.type = "lowpass";
-  filter.frequency.value = 5000;
-
   osc.type = type;
   osc.frequency.value = freq;
-  osc.connect(filter);
-  filter.connect(gain);
+  osc.connect(gain);
   gain.connect(ctx.destination);
 
-  // Smooth envelope for less choppiness
+  // Smooth envelope
   gain.gain.setValueAtTime(0, start);
   gain.gain.linearRampToValueAtTime(vol, start+0.02);
   gain.gain.linearRampToValueAtTime(vol*0.8, start+dur);
@@ -65,29 +61,68 @@ function playTone(ctx, freq, dur, start, type="sine", vol=0.2) {
   osc.stop(start+dur+0.05);
 }
 
+// Simple drum sounds
+function playDrum(ctx, type, start, vol=0.3) {
+  const osc = ctx.createOscillator();
+  const gain = ctx.createGain();
+  osc.connect(gain);
+  gain.connect(ctx.destination);
+
+  if (type === "kick") {
+    osc.type = "sine";
+    osc.frequency.setValueAtTime(150, start);
+    osc.frequency.exponentialRampToValueAtTime(50, start + 0.15);
+  } else if (type === "snare") {
+    osc.type = "triangle";
+    osc.frequency.setValueAtTime(200, start);
+  } else if (type === "hihat") {
+    osc.type = "square";
+    osc.frequency.setValueAtTime(400, start);
+  }
+
+  gain.gain.setValueAtTime(vol, start);
+  gain.gain.exponentialRampToValueAtTime(0.001, start + 0.1);
+
+  osc.start(start);
+  osc.stop(start + 0.1);
+}
+
+function playSection(ctx, section, dynamics=1.0, t) {
+  section.forEach(([mel, chord, bass, dur], i) => {
+    // Melody
+    playTone(ctx, NOTES[mel], dur, t, "sine", 0.3*dynamics);
+    // Chords
+    CHORDS[chord].forEach(n => playTone(ctx, NOTES[n], dur, t, "triangle", 0.15*dynamics));
+    // Bass
+    playTone(ctx, NOTES[bass], dur, t, "square", 0.2*dynamics);
+
+    // Beat every half-beat
+    playDrum(ctx, "hihat", t, 0.12*dynamics);
+    if (i % 2 === 0) {
+      playDrum(ctx, "kick", t, 0.3*dynamics);
+    } else {
+      playDrum(ctx, "snare", t, 0.25*dynamics);
+    }
+
+    t += dur;
+  });
+  return t;
+}
+
 function playSong() {
   const ctx = new (window.AudioContext || window.webkitAudioContext)();
   let t = ctx.currentTime + 0.1;
 
-  // Function to play a section
-  function playSection(section, dynamics=1.0) {
-    section.forEach(([mel, chord, bass, dur]) => {
-      // Melody
-      playTone(ctx, NOTES[mel], dur, t, "sine", 0.3*dynamics);
-      // Chord
-      CHORDS[chord].forEach(n => playTone(ctx, NOTES[n], dur, t, "triangle", 0.15*dynamics));
-      // Bass
-      playTone(ctx, NOTES[bass], dur, t, "square", 0.2*dynamics);
-      t += dur;
-    });
-  }
-
-  // Play with dynamics: intro soft, build up, bridge softer, final loud
-  playSection(intro, 0.6);
-  playSection(song, 0.8);
-  playSection(bridge, 0.7);
-  playSection(song, 1.0);
-  playSection(outro, 0.5);
+  // Intro (soft)
+  t = playSection(ctx, intro, 0.6, t);
+  // Main song (medium)
+  t = playSection(ctx, song, 0.8, t);
+  // Bridge (dip)
+  t = playSection(ctx, bridge, 0.7, t);
+  // Main song again (full)
+  t = playSection(ctx, song, 1.0, t);
+  // Outro (fade)
+  t = playSection(ctx, outro, 0.5, t);
 }
 </script>
 </body>
