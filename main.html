@@ -2,64 +2,73 @@
 <html>
 <head>
   <meta charset="UTF-8">
-  <title>Block by Block Melody</title>
+  <title>Block by Block – Full Arrangement</title>
 </head>
 <body>
-  <h1>🎵 Block by Block – Play Melody</h1>
-  <button onclick="playMelody()">Play Song</button>
+  <h1>🎵 Block by Block – Full Arrangement</h1>
+  <button onclick="playSong()">Play Song</button>
 
   <script>
-    // Map note names to frequencies (C major scale)
+    // Frequencies for C major scale (4th octave)
     const NOTES = {
-      "C": 261.63,
-      "D": 293.66,
-      "E": 329.63,
-      "F": 349.23,
-      "G": 392.00,
-      "A": 440.00,
-      "B": 493.88,
+      "C4": 261.63, "D4": 293.66, "E4": 329.63, "F4": 349.23,
+      "G4": 392.00, "A4": 440.00, "B4": 493.88,
+      "C3": 130.81, "D3": 146.83, "E3": 164.81, "F3": 174.61,
+      "G3": 196.00, "A3": 220.00, "B3": 246.94,
       "REST": 0
     };
 
-    // Melody: [note, duration in seconds]
-    const melody = [
-      ["C", 0.5], ["C", 0.5], ["E", 0.5], ["G", 0.5],
-      ["G", 0.5], ["E", 0.5], ["D", 0.5], ["C", 0.5],
+    // Chord dictionary: root note name -> [root, third, fifth]
+    const CHORDS = {
+      "C": ["C4", "E4", "G4"],
+      "F": ["F4", "A4", "C4"],
+      "G": ["G4", "B4", "D4"],
+      "Am": ["A4", "C4", "E4"]
+    };
 
-      ["E", 0.5], ["E", 0.5], ["G", 0.5], ["A", 0.5],
-      ["G", 0.5], ["E", 0.5], ["D", 0.5], ["C", 0.5],
+    // Song structure: [melodyNote, chordName, bassNote, duration]
+    const song = [
+      ["C4", "C", "C3", 0.5], ["C4", "C", "C3", 0.5], ["E4", "C", "C3", 0.5], ["G4", "C", "C3", 0.5],
+      ["G4", "F", "F3", 0.5], ["E4", "F", "F3", 0.5], ["D4", "G", "G3", 0.5], ["C4", "G", "G3", 0.5],
 
-      ["C", 0.5], ["E", 0.5], ["G", 0.5], ["G", 0.5],
-      ["A", 0.5], ["G", 0.5], ["E", 0.5], ["D", 0.5],
-
-      ["E", 0.5], ["G", 0.5], ["A", 0.5], ["G", 0.5],
-      ["E", 0.5], ["D", 0.5], ["C", 1.0]
+      ["E4", "Am", "A3", 0.5], ["E4", "Am", "A3", 0.5], ["G4", "F", "F3", 0.5], ["A4", "F", "F3", 0.5],
+      ["G4", "C", "C3", 0.5], ["E4", "C", "C3", 0.5], ["D4", "G", "G3", 0.5], ["C4", "G", "G3", 0.5]
     ];
 
-    function playTone(audioCtx, frequency, duration, startTime) {
-      if (frequency === 0) return; // REST
-      const oscillator = audioCtx.createOscillator();
+    function playTone(audioCtx, frequency, duration, startTime, type = "sine", volume = 0.2) {
+      if (frequency === 0) return;
+      const osc = audioCtx.createOscillator();
       const gainNode = audioCtx.createGain();
 
-      oscillator.connect(gainNode);
+      osc.type = type;
+      osc.frequency.value = frequency;
+
+      osc.connect(gainNode);
       gainNode.connect(audioCtx.destination);
 
-      oscillator.type = "sine";
-      oscillator.frequency.value = frequency;
-
-      gainNode.gain.setValueAtTime(0.2, startTime); // volume
+      gainNode.gain.setValueAtTime(volume, startTime);
       gainNode.gain.exponentialRampToValueAtTime(0.001, startTime + duration);
 
-      oscillator.start(startTime);
-      oscillator.stop(startTime + duration);
+      osc.start(startTime);
+      osc.stop(startTime + duration);
     }
 
-    function playMelody() {
+    function playSong() {
       const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
       let currentTime = audioCtx.currentTime;
 
-      melody.forEach(([note, dur]) => {
-        playTone(audioCtx, NOTES[note], dur, currentTime);
+      song.forEach(([melodyNote, chordName, bassNote, dur]) => {
+        // Play melody
+        playTone(audioCtx, NOTES[melodyNote], dur, currentTime, "sine", 0.3);
+
+        // Play chord (three notes)
+        CHORDS[chordName].forEach(note => {
+          playTone(audioCtx, NOTES[note], dur, currentTime, "triangle", 0.15);
+        });
+
+        // Play bass note
+        playTone(audioCtx, NOTES[bassNote], dur, currentTime, "square", 0.2);
+
         currentTime += dur;
       });
     }
