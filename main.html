@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Block by Block Melody</title>
+</head>
+<body>
+  <h1>🎵 Block by Block – Play Melody</h1>
+  <button onclick="playMelody()">Play Song</button>
+
+  <script>
+    // Map note names to frequencies (C major scale)
+    const NOTES = {
+      "C": 261.63,
+      "D": 293.66,
+      "E": 329.63,
+      "F": 349.23,
+      "G": 392.00,
+      "A": 440.00,
+      "B": 493.88,
+      "REST": 0
+    };
+
+    // Melody: [note, duration in seconds]
+    const melody = [
+      ["C", 0.5], ["C", 0.5], ["E", 0.5], ["G", 0.5],
+      ["G", 0.5], ["E", 0.5], ["D", 0.5], ["C", 0.5],
+
+      ["E", 0.5], ["E", 0.5], ["G", 0.5], ["A", 0.5],
+      ["G", 0.5], ["E", 0.5], ["D", 0.5], ["C", 0.5],
+
+      ["C", 0.5], ["E", 0.5], ["G", 0.5], ["G", 0.5],
+      ["A", 0.5], ["G", 0.5], ["E", 0.5], ["D", 0.5],
+
+      ["E", 0.5], ["G", 0.5], ["A", 0.5], ["G", 0.5],
+      ["E", 0.5], ["D", 0.5], ["C", 1.0]
+    ];
+
+    function playTone(audioCtx, frequency, duration, startTime) {
+      if (frequency === 0) return; // REST
+      const oscillator = audioCtx.createOscillator();
+      const gainNode = audioCtx.createGain();
+
+      oscillator.connect(gainNode);
+      gainNode.connect(audioCtx.destination);
+
+      oscillator.type = "sine";
+      oscillator.frequency.value = frequency;
+
+      gainNode.gain.setValueAtTime(0.2, startTime); // volume
+      gainNode.gain.exponentialRampToValueAtTime(0.001, startTime + duration);
+
+      oscillator.start(startTime);
+      oscillator.stop(startTime + duration);
+    }
+
+    function playMelody() {
+      const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      let currentTime = audioCtx.currentTime;
+
+      melody.forEach(([note, dur]) => {
+        playTone(audioCtx, NOTES[note], dur, currentTime);
+        currentTime += dur;
+      });
+    }
+  </script>
+</body>
+</html>
