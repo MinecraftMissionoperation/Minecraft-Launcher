@@ -2,8 +2,11 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>🎵 Block by Block – First edition</title>
+<title>🎵 Block by Block – Beat Reactive Neon</title>
 <style>
+  :root {
+    --glow-strength: 1;
+  }
   body {
     margin: 0;
     height: 100vh;
@@ -17,6 +20,8 @@
     background: linear-gradient(270deg, #ff00ff, #00ffff, #ff9900, #00ff99);
     background-size: 800% 800%;
     animation: neonBG 15s ease infinite;
+    filter: brightness(calc(0.8 + var(--glow-strength) * 0.4));
+    transition: filter 0.1s ease;
   }
   @keyframes neonBG {
     0% {background-position: 0% 50%;}
@@ -47,7 +52,7 @@
 </head>
 <body>
 
-<h1>🎵 Block by Block – Smooth Neon Edition</h1>
+<h1>🎵 Block by Block – Beat Reactive Neon</h1>
 <button onclick="playSong()">Play Song</button>
 
 <script>
@@ -64,23 +69,32 @@ const CHORDS = {
   "Am":["A4","C4","E4"]
 };
 
-// Smooth groove pattern
-const song = [
+// Tempo scaling
+const ORIGINAL_BPM = 100;
+const TARGET_BPM = ORIGINAL_BPM + 20;
+const TEMPO_SCALE = ORIGINAL_BPM / TARGET_BPM;
+
+function scaleDurations(section) {
+  return section.map(([mel, chord, bass, dur]) => 
+    [mel, chord, bass, dur * TEMPO_SCALE]
+  );
+}
+
+const intro = scaleDurations([
+  ["E4","C","C3",0.6],["G4","C","C3",0.6],["A4","F","F3",0.6],["G4","F","F3",0.6]
+]);
+const song = scaleDurations([
   ["C4","C","C3",0.6],["C4","C","C3",0.6],["E4","C","C3",0.6],["G4","C","C3",0.6],
   ["G4","F","F3",0.6],["E4","F","F3",0.6],["D4","G","G3",0.6],["C4","G","G3",0.6],
   ["E4","Am","A3",0.6],["E4","Am","A3",0.6],["G4","F","F3",0.6],["A4","F","F3",0.6],
   ["G4","C","C3",0.6],["E4","C","C3",0.6],["D4","G","G3",0.6],["C4","G","G3",1.2]
-];
-
-const intro = [
-  ["E4","C","C3",0.6],["G4","C","C3",0.6],["A4","F","F3",0.6],["G4","F","F3",0.6]
-];
-const bridge = [
+]);
+const bridge = scaleDurations([
   ["A4","Am","A3",0.6],["G4","F","F3",0.6],["E4","G","G3",0.6],["F4","C","C3",0.6]
-];
-const outro = [
+]);
+const outro = scaleDurations([
   ["C4","C","C3",0.6],["E4","C","C3",0.6],["G4","C","C3",1.8]
-];
+]);
 
 function playTone(ctx, freq, dur, start, type="sawtooth", vol=0.2) {
   if (freq===0) return;
@@ -98,14 +112,13 @@ function playTone(ctx, freq, dur, start, type="sawtooth", vol=0.2) {
   filter.connect(gain);
   gain.connect(ctx.destination);
 
-  // Smooth attack/release
   gain.gain.setValueAtTime(0, start);
   gain.gain.linearRampToValueAtTime(vol, start+0.05);
   gain.gain.linearRampToValueAtTime(vol*0.9, start+dur-0.05);
   gain.gain.linearRampToValueAtTime(0, start+dur);
 
   osc.start(start);
-  osc.stop(start+dur+0.05); // overlap for smoothness
+  osc.stop(start+dur+0.05);
 }
 
 function playBackgroundPad(ctx, chord, start, dur) {
@@ -113,7 +126,7 @@ function playBackgroundPad(ctx, chord, start, dur) {
     const osc = ctx.createOscillator();
     const gain = ctx.createGain();
     osc.type = "triangle";
-    osc.frequency.value = NOTES[n]/2; // lower octave pad
+    osc.frequency.value = NOTES[n]/2;
     osc.connect(gain);
     gain.connect(ctx.destination);
     gain.gain.setValueAtTime(0.05, start);
@@ -121,6 +134,13 @@ function playBackgroundPad(ctx, chord, start, dur) {
     osc.start(start);
     osc.stop(start+dur);
   });
+}
+
+function pulseNeon() {
+  document.documentElement.style.setProperty('--glow-strength', 2);
+  setTimeout(() => {
+    document.documentElement.style.setProperty('--glow-strength', 1);
+  }, 100);
 }
 
 function playDrum(ctx, type, start, vol=0.3) {
@@ -133,9 +153,11 @@ function playDrum(ctx, type, start, vol=0.3) {
     osc.type = "sine";
     osc.frequency.setValueAtTime(150, start);
     osc.frequency.exponentialRampToValueAtTime(50, start + 0.15);
+    setTimeout(pulseNeon, (start - ctx.currentTime) * 1000); // sync pulse
   } else if (type === "snare") {
     osc.type = "triangle";
     osc.frequency.setValueAtTime(200, start);
+    setTimeout(pulseNeon, (start - ctx.currentTime) * 1000);
   } else if (type === "hihat") {
     osc.type = "square";
     osc.frequency.setValueAtTime(400, start);
@@ -150,36 +172,10 @@ function playDrum(ctx, type, start, vol=0.3) {
 
 function playSection(ctx, section, dynamics=1.0, t) {
   section.forEach(([mel, chord, bass, dur], i) => {
-    // Lead
     playTone(ctx, NOTES[mel], dur, t, "sawtooth", 0.25*dynamics);
-    // Chords
     CHORDS[chord].forEach(n => playTone(ctx, NOTES[n], dur, t, "triangle", 0.12*dynamics));
-    // Bass
     playTone(ctx, NOTES[bass], dur, t, "square", 0.18*dynamics);
-    // Background pad
     playBackgroundPad(ctx, chord, t, dur*2);
 
-    // Drums
     if (Math.random() > 0.2) playDrum(ctx, "hihat", t, 0.12*dynamics);
-    if (i % 4 === 0) playDrum(ctx, "kick", t, 0.3*dynamics);
-    if (i % 4 === 2) playDrum(ctx, "snare", t, 0.25*dynamics);
-
-    t += dur * 0.95; // slight overlap for smoothness
-  });
-  return t;
-}
-
-function playSong() {
-  const ctx = new (window.AudioContext || window.webkitAudioContext)();
-  let t = ctx.currentTime + 0.1;
-
-  t = playSection(ctx, intro, 0.6, t);
-  t = playSection(ctx, song, 0.85, t);
-  t = playSection(ctx, bridge, 0.75, t);
-  t = playSection(ctx, song, 1.0, t);
-  t = playSection(ctx, outro, 0.5, t);
-}
-</script>
-
-</body>
-</html>
+    if (i % 4 === 0) playDrum(ctx, "kick", t, 0.
