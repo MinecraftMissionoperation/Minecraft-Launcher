@@ -2,10 +2,10 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Block by Block – Full Band</title>
+<title>Block by Block – Refined Notes</title>
 </head>
 <body>
-<h1>🎵 Block by Block – Full Band Version</h1>
+<h1>🎵 Block by Block – Refined & Smooth</h1>
 <button onclick="playSong()">Play Song</button>
 
 <script>
@@ -22,15 +22,14 @@ const CHORDS = {
   "Am":["A4","C4","E4"]
 };
 
-// Original melody section
+// Melody sections with consistent durations
 const song = [
   ["C4","C","C3",0.5],["C4","C","C3",0.5],["E4","C","C3",0.5],["G4","C","C3",0.5],
   ["G4","F","F3",0.5],["E4","F","F3",0.5],["D4","G","G3",0.5],["C4","G","G3",0.5],
   ["E4","Am","A3",0.5],["E4","Am","A3",0.5],["G4","F","F3",0.5],["A4","F","F3",0.5],
-  ["G4","C","C3",0.5],["E4","C","C3",0.5],["D4","G","G3",0.5],["C4","G","G3",1.0]
+  ["G4","C","C3",0.5],["E4","C","C3",0.5],["D4","G","G3",0.5],["C4","G","G3",1.0] // last note longer
 ];
 
-// Extra sections
 const intro = [
   ["E4","C","C3",0.5],["G4","C","C3",0.5],["A4","F","F3",0.5],["G4","F","F3",0.5]
 ];
@@ -38,11 +37,10 @@ const bridge = [
   ["A4","Am","A3",0.5],["G4","F","F3",0.5],["E4","G","G3",0.5],["F4","C","C3",0.5]
 ];
 const outro = [
-  ["C4","C","C3",0.5],["E4","C","C3",0.5],["G4","C","C3",1.0]
+  ["C4","C","C3",0.5],["E4","C","C3",0.5],["G4","C","C3",1.5] // final sustain
 ];
 
-// Play pitched tone
-function playTone(ctx, freq, dur, start, type="sine", vol=0.2, sustain=0.1) {
+function playTone(ctx, freq, dur, start, type="sine", vol=0.2) {
   if (freq===0) return;
   const osc = ctx.createOscillator();
   const gain = ctx.createGain();
@@ -53,14 +51,13 @@ function playTone(ctx, freq, dur, start, type="sine", vol=0.2, sustain=0.1) {
 
   gain.gain.setValueAtTime(0, start);
   gain.gain.linearRampToValueAtTime(vol, start+0.02);
-  gain.gain.linearRampToValueAtTime(vol, start+dur);
-  gain.gain.linearRampToValueAtTime(0, start+dur+sustain);
+  gain.gain.linearRampToValueAtTime(vol, start+dur-0.05);
+  gain.gain.linearRampToValueAtTime(0, start+dur);
 
   osc.start(start);
-  osc.stop(start+dur+sustain);
+  osc.stop(start+dur);
 }
 
-// Drums
 function playDrum(ctx, type, start, vol=0.3) {
   const osc = ctx.createOscillator();
   const gain = ctx.createGain();
@@ -77,35 +74,30 @@ function playDrum(ctx, type, start, vol=0.3) {
   } else if (type === "hihat") {
     osc.type = "square";
     osc.frequency.setValueAtTime(400, start);
-  } else if (type === "tom") {
-    osc.type = "sine";
-    osc.frequency.setValueAtTime(120, start);
-    osc.frequency.exponentialRampToValueAtTime(80, start + 0.2);
   }
 
   gain.gain.setValueAtTime(vol, start);
   gain.gain.exponentialRampToValueAtTime(0.001, start + 0.1);
 
   osc.start(start);
-  osc.stop(start + 0.3);
+  osc.stop(start + 0.1);
 }
 
 function playSection(ctx, section, dynamics=1.0, t) {
   section.forEach(([mel, chord, bass, dur], i) => {
-    // Lead melody
-    playTone(ctx, NOTES[mel], dur, t, "sawtooth", 0.25*dynamics, 0.15);
-    // Pad chords
-    CHORDS[chord].forEach(n => playTone(ctx, NOTES[n], dur*2, t, "triangle", 0.12*dynamics, 0.3));
-    // Bass guitar
-    playTone(ctx, NOTES[bass], dur, t, "square", 0.18*dynamics, 0.2);
-    // Rhythm guitar (arpeggio)
-    CHORDS[chord].forEach((n, idx) => playTone(ctx, NOTES[n], 0.25, t + idx*0.1, "square", 0.08*dynamics, 0.05));
+    // Lead
+    playTone(ctx, NOTES[mel], dur, t, "sawtooth", 0.25*dynamics);
+    // Chords
+    CHORDS[chord].forEach(n => playTone(ctx, NOTES[n], dur, t, "triangle", 0.12*dynamics));
+    // Bass
+    playTone(ctx, NOTES[bass], dur, t, "square", 0.18*dynamics);
+    // Rhythm guitar (short arpeggio)
+    CHORDS[chord].forEach((n, idx) => playTone(ctx, NOTES[n], 0.25, t + idx*0.1, "square", 0.08*dynamics));
 
-    // Drums: varied pattern
+    // Drums (varied)
     if (Math.random() > 0.2) playDrum(ctx, "hihat", t, 0.12*dynamics);
     if (i % 4 === 0) playDrum(ctx, "kick", t, 0.3*dynamics);
     if (i % 4 === 2) playDrum(ctx, "snare", t, 0.25*dynamics);
-    if (Math.random() > 0.85) playDrum(ctx, "tom", t+0.25, 0.2*dynamics);
 
     t += dur;
   });
@@ -116,15 +108,10 @@ function playSong() {
   const ctx = new (window.AudioContext || window.webkitAudioContext)();
   let t = ctx.currentTime + 0.1;
 
-  // Intro (soft)
   t = playSection(ctx, intro, 0.6, t);
-  // Main song (medium)
   t = playSection(ctx, song, 0.85, t);
-  // Bridge (dip)
   t = playSection(ctx, bridge, 0.75, t);
-  // Main song again (full)
   t = playSection(ctx, song, 1.0, t);
-  // Outro (fade)
   t = playSection(ctx, outro, 0.5, t);
 }
 </script>
