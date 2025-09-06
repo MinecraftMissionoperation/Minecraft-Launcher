@@ -1,11 +1,53 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Block by Block – Refined Notes</title>
+<title>🎵 Block by Block – First edition</title>
+<style>
+  body {
+    margin: 0;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    font-family: 'Segoe UI', sans-serif;
+    color: white;
+    text-align: center;
+    background: linear-gradient(270deg, #ff00ff, #00ffff, #ff9900, #00ff99);
+    background-size: 800% 800%;
+    animation: neonBG 15s ease infinite;
+  }
+  @keyframes neonBG {
+    0% {background-position: 0% 50%;}
+    50% {background-position: 100% 50%;}
+    100% {background-position: 0% 50%;}
+  }
+  h1 {
+    font-size: 2.5em;
+    text-shadow: 0 0 10px #fff, 0 0 20px #ff00ff, 0 0 30px #00ffff;
+    margin-bottom: 20px;
+  }
+  button {
+    padding: 15px 30px;
+    font-size: 1.2em;
+    border: none;
+    border-radius: 8px;
+    background: #111;
+    color: white;
+    cursor: pointer;
+    box-shadow: 0 0 10px #ff00ff, 0 0 20px #00ffff;
+    transition: transform 0.2s ease, box-shadow 0.3s ease;
+  }
+  button:hover {
+    transform: scale(1.05);
+    box-shadow: 0 0 20px #ff00ff, 0 0 40px #00ffff;
+  }
+</style>
 </head>
 <body>
-<h1>🎵 Block by Block – Refined & Smooth</h1>
+
+<h1>🎵 Block by Block – Smooth Neon Edition</h1>
 <button onclick="playSong()">Play Song</button>
 
 <script>
@@ -22,40 +64,63 @@ const CHORDS = {
   "Am":["A4","C4","E4"]
 };
 
-// Melody sections with consistent durations
+// Smooth groove pattern
 const song = [
-  ["C4","C","C3",0.5],["C4","C","C3",0.5],["E4","C","C3",0.5],["G4","C","C3",0.5],
-  ["G4","F","F3",0.5],["E4","F","F3",0.5],["D4","G","G3",0.5],["C4","G","G3",0.5],
-  ["E4","Am","A3",0.5],["E4","Am","A3",0.5],["G4","F","F3",0.5],["A4","F","F3",0.5],
-  ["G4","C","C3",0.5],["E4","C","C3",0.5],["D4","G","G3",0.5],["C4","G","G3",1.0] // last note longer
+  ["C4","C","C3",0.6],["C4","C","C3",0.6],["E4","C","C3",0.6],["G4","C","C3",0.6],
+  ["G4","F","F3",0.6],["E4","F","F3",0.6],["D4","G","G3",0.6],["C4","G","G3",0.6],
+  ["E4","Am","A3",0.6],["E4","Am","A3",0.6],["G4","F","F3",0.6],["A4","F","F3",0.6],
+  ["G4","C","C3",0.6],["E4","C","C3",0.6],["D4","G","G3",0.6],["C4","G","G3",1.2]
 ];
 
 const intro = [
-  ["E4","C","C3",0.5],["G4","C","C3",0.5],["A4","F","F3",0.5],["G4","F","F3",0.5]
+  ["E4","C","C3",0.6],["G4","C","C3",0.6],["A4","F","F3",0.6],["G4","F","F3",0.6]
 ];
 const bridge = [
-  ["A4","Am","A3",0.5],["G4","F","F3",0.5],["E4","G","G3",0.5],["F4","C","C3",0.5]
+  ["A4","Am","A3",0.6],["G4","F","F3",0.6],["E4","G","G3",0.6],["F4","C","C3",0.6]
 ];
 const outro = [
-  ["C4","C","C3",0.5],["E4","C","C3",0.5],["G4","C","C3",1.5] // final sustain
+  ["C4","C","C3",0.6],["E4","C","C3",0.6],["G4","C","C3",1.8]
 ];
 
-function playTone(ctx, freq, dur, start, type="sine", vol=0.2) {
+function playTone(ctx, freq, dur, start, type="sawtooth", vol=0.2) {
   if (freq===0) return;
   const osc = ctx.createOscillator();
   const gain = ctx.createGain();
+  const filter = ctx.createBiquadFilter();
+
   osc.type = type;
   osc.frequency.value = freq;
-  osc.connect(gain);
+
+  filter.type = "lowpass";
+  filter.frequency.setValueAtTime(8000, start);
+
+  osc.connect(filter);
+  filter.connect(gain);
   gain.connect(ctx.destination);
 
+  // Smooth attack/release
   gain.gain.setValueAtTime(0, start);
-  gain.gain.linearRampToValueAtTime(vol, start+0.02);
-  gain.gain.linearRampToValueAtTime(vol, start+dur-0.05);
+  gain.gain.linearRampToValueAtTime(vol, start+0.05);
+  gain.gain.linearRampToValueAtTime(vol*0.9, start+dur-0.05);
   gain.gain.linearRampToValueAtTime(0, start+dur);
 
   osc.start(start);
-  osc.stop(start+dur);
+  osc.stop(start+dur+0.05); // overlap for smoothness
+}
+
+function playBackgroundPad(ctx, chord, start, dur) {
+  CHORDS[chord].forEach(n => {
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = "triangle";
+    osc.frequency.value = NOTES[n]/2; // lower octave pad
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    gain.gain.setValueAtTime(0.05, start);
+    gain.gain.linearRampToValueAtTime(0.04, start+dur);
+    osc.start(start);
+    osc.stop(start+dur);
+  });
 }
 
 function playDrum(ctx, type, start, vol=0.3) {
@@ -91,15 +156,15 @@ function playSection(ctx, section, dynamics=1.0, t) {
     CHORDS[chord].forEach(n => playTone(ctx, NOTES[n], dur, t, "triangle", 0.12*dynamics));
     // Bass
     playTone(ctx, NOTES[bass], dur, t, "square", 0.18*dynamics);
-    // Rhythm guitar (short arpeggio)
-    CHORDS[chord].forEach((n, idx) => playTone(ctx, NOTES[n], 0.25, t + idx*0.1, "square", 0.08*dynamics));
+    // Background pad
+    playBackgroundPad(ctx, chord, t, dur*2);
 
-    // Drums (varied)
+    // Drums
     if (Math.random() > 0.2) playDrum(ctx, "hihat", t, 0.12*dynamics);
     if (i % 4 === 0) playDrum(ctx, "kick", t, 0.3*dynamics);
     if (i % 4 === 2) playDrum(ctx, "snare", t, 0.25*dynamics);
 
-    t += dur;
+    t += dur * 0.95; // slight overlap for smoothness
   });
   return t;
 }
@@ -115,5 +180,6 @@ function playSong() {
   t = playSection(ctx, outro, 0.5, t);
 }
 </script>
+
 </body>
 </html>
