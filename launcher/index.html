@@ -1,213 +1,148 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
-  <title>Eaglercraft Launcher</title>
-  <style>
-    :root {
-      color-scheme: dark light;
-      --bg: #0f1115;
-      --fg: #e6e6e6;
-      --muted: #a3a3a3;
-      --accent: #6ee7b7;
-      --accent-2: #60a5fa;
-      --danger: #f87171;
-      --card: #171923;
-      --border: #24283a;
-    }
-    * { box-sizing: border-box; }
-    html, body {
-      height: 100%; margin: 0; background: var(--bg); color: var(--fg);
-      font: 14px/1.4 system-ui, -apple-system, Segoe UI, Roboto, "Helvetica Neue", Arial, "Apple Color Emoji", "Segoe UI Emoji";
-    }
-    .wrap {
-      display: grid; grid-template-rows: auto 1fr; height: 100%;
-    }
-    header {
-      display: grid; gap: .75rem; align-items: center; grid-template-columns: 1fr auto auto auto;
-      padding: .75rem 1rem; background: var(--card); border-bottom: 1px solid var(--border);
-      position: sticky; top: 0; z-index: 5;
-    }
-    .brand { font-weight: 700; letter-spacing:.2px; }
-    .controls { display: flex; gap: .5rem; align-items: center; justify-content: flex-end; }
-    select, button {
-      appearance: none; border: 1px solid var(--border); background: #11131a; color: var(--fg);
-      padding: .5rem .65rem; border-radius: .5rem; cursor: pointer;
-    }
-    select { min-width: 200px; }
-    button.primary { background: linear-gradient(135deg, var(--accent), var(--accent-2)); color: #0a0b0f; border: none; font-weight: 700; }
-    button.ghost { background: #10131a; }
-    button:disabled { opacity: .6; cursor: not-allowed; }
-    .status { color: var(--muted); font-size: 12px; }
-    main { position: relative; }
-    .stage {
-      position: absolute; inset: 0; display: grid; place-items: center; background: #0b0d13;
-    }
-    iframe {
-      width: 100%; height: 100%; border: none; background: #000;
-    }
-    .placeholder {
-      display: grid; gap: .75rem; place-items: center; text-align: center; max-width: 520px; margin: 0 1rem;
-      color: var(--muted);
-    }
-    .loading {
-      position: absolute; top: .75rem; right: .75rem; padding: .35rem .5rem; border-radius: .375rem;
-      background: rgba(0,0,0,.35); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); font-size: 12px;
-      border: 1px solid var(--border);
-    }
-    .error {
-      color: var(--danger); font-weight: 600;
-    }
-    @media (max-width: 640px) {
-      header { grid-template-columns: 1fr; grid-auto-rows: auto; }
-      .controls { justify-content: stretch; flex-wrap: wrap; }
-      select { min-width: 0; width: 100%; }
-    }
-  </style>
+<meta charset="UTF-8">
+<title>Eaglercraft Neon Launcher</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<style>
+  body {
+    margin: 0;
+    font-family: 'Segoe UI', sans-serif;
+    background: radial-gradient(circle at top, #0a0014 0%, #050008 100%);
+    color: #fff;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+
+  header {
+    padding: 1rem;
+    text-align: center;
+    font-size: 2rem;
+    font-weight: bold;
+    color: #fff;
+    text-shadow: 0 0 10px #a020f0, 0 0 20px #a020f0, 0 0 40px #ff00ff;
+    letter-spacing: 2px;
+  }
+
+  nav {
+    display: flex;
+    justify-content: center;
+    gap: 1rem;
+    background: rgba(20, 0, 40, 0.8);
+    padding: 0.5rem;
+    border-bottom: 2px solid #a020f0;
+  }
+
+  nav button {
+    background: transparent;
+    border: 2px solid #a020f0;
+    color: #fff;
+    padding: 0.5rem 1rem;
+    font-size: 1rem;
+    cursor: pointer;
+    border-radius: 6px;
+    transition: all 0.3s ease;
+    text-shadow: 0 0 5px #a020f0;
+  }
+
+  nav button.active,
+  nav button:hover {
+    background: #a020f0;
+    box-shadow: 0 0 10px #a020f0, 0 0 20px #ff00ff, 0 0 40px #ff00ff;
+  }
+
+  .tab-content {
+    flex: 1;
+    display: none;
+    padding: 2rem;
+    animation: fadeIn 0.4s ease;
+  }
+
+  .tab-content.active {
+    display: grid;
+    gap: 1rem;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  }
+
+  .game-link {
+    display: block;
+    background: rgba(30, 0, 60, 0.8);
+    padding: 1rem;
+    border-radius: 8px;
+    text-align: center;
+    color: #fff;
+    text-decoration: none;
+    font-weight: bold;
+    border: 2px solid #a020f0;
+    transition: all 0.3s ease;
+    text-shadow: 0 0 5px #a020f0;
+  }
+
+  .game-link:hover {
+    background: #a020f0;
+    box-shadow: 0 0 10px #a020f0, 0 0 20px #ff00ff, 0 0 40px #ff00ff;
+    transform: translateY(-3px);
+  }
+
+  @keyframes fadeIn {
+    from {opacity: 0; transform: translateY(10px);}
+    to {opacity: 1; transform: translateY(0);}
+  }
+</style>
 </head>
 <body>
-  <div class="wrap">
-    <header>
-      <div class="brand">Eaglercraft Launcher</div>
-      <div class="status" id="status">Pick a version to start</div>
-      <div class="controls">
-        <select id="versionSelect" aria-label="Eaglercraft version"></select>
-        <button id="playBtn" class="primary">Play</button>
-        <button id="fullscreenBtn" class="ghost" title="Toggle fullscreen (F)">Fullscreen</button>
-      </div>
-    </header>
 
-    <main>
-      <div class="stage" id="stage">
-        <div class="placeholder" id="placeholder">
-          <div style="font-size:18px;font-weight:700;">Ready to play</div>
-          <div>Select a version above and hit Play. You can add more versions anytime.</div>
-          <div style="font-size:12px;opacity:.8;">Tip: Press F to toggle fullscreen while playing.</div>
-        </div>
-        <iframe id="gameFrame" title="Eaglercraft" hidden></iframe>
-        <div class="loading" id="loading" hidden>Loading…</div>
-      </div>
-    </main>
-  </div>
+<header>⚡ Eaglercraft Neon Launcher ⚡</header>
 
-  <script>
-    // Configure your available versions here.
-    // id: stable identifier for URLs/localStorage
-    // name: display label
-    // path: relative path to the version folder containing its index.html
-    const VERSIONS = [
-      { id: "1.5.2", name: "Eaglercraft 1.5.2", path: "./versions/1.5.2/index.html" },
-      { id: "1.8.8", name: "Eaglercraft 1.8.8", path: "./versions/1.8.8/index.html" },
-      { id: "b1.3",  name: "Eaglercraft Beta 1.3", path: "./versions/b1.3/index.html" }
-    ];
+<nav>
+  <button class="tab-btn active" data-tab="client">Client</button>
+  <button class="tab-btn" data-tab="hacked">Hacked Client</button>
+  <button class="tab-btn" data-tab="normal">Normal</button>
+  <button class="tab-btn" data-tab="extra">Extra</button>
+</nav>
 
-    const sel = document.getElementById("versionSelect");
-    const playBtn = document.getElementById("playBtn");
-    const fsBtn = document.getElementById("fullscreenBtn");
-    const frame = document.getElementById("gameFrame");
-    const placeholder = document.getElementById("placeholder");
-    const loading = document.getElementById("loading");
-    const statusEl = document.getElementById("status");
+<!-- Client Tab -->
+<div id="client" class="tab-content active">
+  <a href="https://yourdomain.com/versions/client1/" target="_blank" class="game-link">Client v1</a>
+  <a href="https://yourdomain.com/versions/client2/" target="_blank" class="game-link">Client v2</a>
+</div>
 
-    // Populate dropdown
-    function populate() {
-      sel.innerHTML = "";
-      VERSIONS.forEach(v => {
-        const opt = document.createElement("option");
-        opt.value = v.id;
-        opt.textContent = v.name;
-        sel.appendChild(opt);
-      });
-    }
+<!-- Hacked Client Tab -->
+<div id="hacked" class="tab-content">
+  <a href="https://yourdomain.com/versions/hacked1/" target="_blank" class="game-link">Hacked Client v1</a>
+  <a href="https://yourdomain.com/versions/hacked2/" target="_blank" class="game-link">Hacked Client v2</a>
+</div>
 
-    // Helpers
-    const getVersionById = id => VERSIONS.find(v => v.id === id);
-    const setStatus = (msg) => { statusEl.textContent = msg; }
+<!-- Normal Tab -->
+<div id="normal" class="tab-content">
+  <a href="https://rawcdn.githack.com/XxFluffyAsherxX/Eaglercraft-1.12.2/350e587a57eef1bd0bc685c339f52a6c5b0a7fde/Web/index.html" target="_blank" class="game-link">Eaglercraft 1.12.2</a>
+  <a href="https://rawcdn.githack.com/EaglerStorage/Eaglercraft-1.8.9/541ccd204a5abd91bfd9670e1ba3e352614c0088/index.html" target="_blank" class="game-link">Eaglercraft 1.8.9</a>
+  <a href="https://rawcdn.githack.com/X-NOBER/Eaglercraft/ec68ec002843dcc8f4233b3d4574e2f48c757cd0/EaglercraftX_1.8_u52_Offline_Signed.html" target="_blank" class="game-link">Eaglercraft 1.8.8</a>
+  <a href="https://rawcdn.githack.com/catfoolyou/Eagler-Online/0de1f0d6d5e7c33b8acaa5a9c7536c5ec0779359/Eaglercraft_1.5_Offline_Download.html" target="_blank" class="game-link">Eaglercraft 1.5.2</a>
+  <a href="https://rawcdn.githack.com/Eaglercraft-Archive/eaglercraft-beta-1.3-source/6e1c8c911bff815640233df8044e157fcfda395a/javascript/index.html" target="_blank" class="game-link">Eaglercraft 1.3</a>
+</div>
 
-    // Persist/restore choice via localStorage and URL (?version=)
-    function initialSelection() {
-      const params = new URLSearchParams(location.search);
-      const q = params.get("version");
-      if (q && getVersionById(q)) return q;
-      const saved = localStorage.getItem("eagler:lastVersion");
-      if (saved && getVersionById(saved)) return saved;
-      return VERSIONS[0]?.id || "";
-    }
+<!-- Extra Tab -->
+<div id="extra" class="tab-content">
+  <a href="https://yourdomain.com/versions/extra1/" target="_blank" class="game-link">Extra v1</a>
+  <a href="https://yourdomain.com/versions/extra2/" target="_blank" class="game-link">Extra v2</a>
+</div>
 
-    function setQueryVersion(id) {
-      const url = new URL(location.href);
-      url.searchParams.set("version", id);
-      history.replaceState({}, "", url);
-    }
+<script>
+  const buttons = document.querySelectorAll('.tab-btn');
+  const tabs = document.querySelectorAll('.tab-content');
 
-    // Load a version into the iframe
-    async function loadVersion(id) {
-      const v = getVersionById(id);
-      if (!v) {
-        setStatus("Version not found");
-        return;
-      }
-      loading.hidden = false;
-      frame.hidden = true;
-      placeholder.hidden = true;
-      setStatus(`Launching ${v.name}…`);
-      try {
-        // Preflight: check the index exists (same-origin recommended)
-        const res = await fetch(v.path, { method: "HEAD", cache: "no-store" });
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        frame.src = v.path;
-        // Wait for load or fail
-        await new Promise((resolve, reject) => {
-          const onLoad = () => { cleanup(); resolve(); };
-          const onErr = () => { cleanup(); reject(new Error("Failed to load the selected version.")); };
-          const cleanup = () => {
-            frame.removeEventListener("load", onLoad);
-            frame.removeEventListener("error", onErr);
-          };
-          frame.addEventListener("load", onLoad, { once: true });
-          frame.addEventListener("error", onErr, { once: true });
-        });
-        frame.hidden = false;
-        setStatus(`Playing ${v.name}`);
-        localStorage.setItem("eagler:lastVersion", id);
-        setQueryVersion(id);
-      } catch (e) {
-        frame.hidden = true;
-        placeholder.hidden = false;
-        setStatus("Load error");
-        alert("Couldn't load that version.\n\nReason: " + (e?.message || e));
-      } finally {
-        loading.hidden = true;
-      }
-    }
+  buttons.forEach(btn => {
+    btn.addEventListener('click', () => {
+      buttons.forEach(b => b.classList.remove('active'));
+      tabs.forEach(t => t.classList.remove('active'));
 
-    // Fullscreen toggle (button + 'F' key)
-    async function toggleFullscreen() {
-      const el = document.documentElement;
-      if (!document.fullscreenElement) {
-        try { await el.requestFullscreen(); } catch {}
-      } else {
-        try { await document.exitFullscreen(); } catch {}
-      }
-    }
-
-    // Wire up
-    populate();
-    sel.value = initialSelection();
-    setStatus("Pick a version to start");
-    playBtn.addEventListener("click", () => loadVersion(sel.value));
-    fsBtn.addEventListener("click", toggleFullscreen);
-    document.addEventListener("keydown", (e) => {
-      if (e.key.toLowerCase() === "f") toggleFullscreen();
-      if (e.key === "Enter" && document.activeElement === sel) loadVersion(sel.value);
+      btn.classList.add('active');
+      document.getElementById(btn.dataset.tab).classList.add('active');
     });
+  });
+</script>
 
-    // Optional: auto-play if URL already specifies ?version=
-    if (new URLSearchParams(location.search).get("version")) {
-      loadVersion(sel.value);
-    }
-  </script>
 </body>
 </html>
-
