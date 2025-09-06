@@ -14,7 +14,7 @@
 <body>
   <h1>🎶 One-Minute Concert Band</h1>
   <p>Click play to hear a full band arrangement with realistic instruments.</p>
-  <button id="playBtn">Play</button>
+  <button id="playBtn">Play Song</button>
   <div id="status"></div>
   <div id="error"></div>
 
@@ -171,6 +171,11 @@
   playBtn.addEventListener('click', async () => {
     try {
       if (!started) {
+        // Create audio context on first click
         ac = new (window.AudioContext || window.webkitAudioContext)();
         started = true;
         await loadInstruments();
+      }
+      // Once instruments are loaded, schedule the song
+      scheduleSong();
+    } catch (e
