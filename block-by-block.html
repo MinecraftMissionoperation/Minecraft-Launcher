@@ -1,12 +1,12 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>🎵 Block by Block – Beat Reactive Neon</title>
 <style>
-  :root {
-    --glow-strength: 1;
-  }
+  :root { --glow-strength: 1; }
+
   body {
     margin: 0;
     height: 100vh;
@@ -14,48 +14,51 @@
     flex-direction: column;
     justify-content: center;
     align-items: center;
-    font-family: 'Segoe UI', sans-serif;
+    font-family: "Segoe UI", system-ui, sans-serif;
     color: white;
     text-align: center;
     background: linear-gradient(270deg, #ff00ff, #00ffff, #ff9900, #00ff99);
     background-size: 800% 800%;
-    animation: neonBG 15s ease infinite;
-    filter: brightness(calc(0.8 + var(--glow-strength) * 0.4));
+    animation: neonBG 14s ease infinite;
+    filter: brightness(calc(0.85 + var(--glow-strength) * 0.35));
     transition: filter 0.1s ease;
   }
+
   @keyframes neonBG {
-    0% {background-position: 0% 50%;}
-    50% {background-position: 100% 50%;}
-    100% {background-position: 0% 50%;}
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
   }
+
   h1 {
-    font-size: 2.5em;
+    font-size: 2.4rem;
+    line-height: 1.2;
+    margin: 0 16px 20px;
     text-shadow: 0 0 10px #fff, 0 0 20px #ff00ff, 0 0 30px #00ffff;
-    margin-bottom: 20px;
   }
+
   button {
-    padding: 15px 30px;
-    font-size: 1.2em;
+    padding: 14px 28px;
+    font-size: 1.1rem;
     border: none;
-    border-radius: 8px;
+    border-radius: 10px;
     background: #111;
     color: white;
     cursor: pointer;
     box-shadow: 0 0 10px #ff00ff, 0 0 20px #00ffff;
-    transition: transform 0.2s ease, box-shadow 0.3s ease;
+    transition: transform 0.2s ease, box-shadow 0.3s ease, opacity 0.2s ease;
   }
-  button:hover {
-    transform: scale(1.05);
-    box-shadow: 0 0 20px #ff00ff, 0 0 40px #00ffff;
-  }
+  button:hover { transform: scale(1.05); box-shadow: 0 0 20px #ff00ff, 0 0 40px #00ffff; }
+  button:disabled { opacity: 0.6; cursor: not-allowed; }
 </style>
 </head>
 <body>
 
 <h1>🎵 Block by Block – Beat Reactive Neon</h1>
-<button onclick="playSong()">Play Song</button>
+<button id="playBtn">Play Song</button>
 
 <script>
+/* ===================== Music data ===================== */
 const NOTES = {
   "C4":261.63,"D4":293.66,"E4":329.63,"F4":349.23,"G4":392.00,"A4":440.00,"B4":493.88,
   "C3":130.81,"D3":146.83,"E3":164.81,"F3":174.61,"G3":196.00,"A3":220.00,"B3":246.94,
@@ -69,41 +72,46 @@ const CHORDS = {
   "Am":["A4","C4","E4"]
 };
 
-// Tempo scaling
-const ORIGINAL_BPM = 100;
-const TARGET_BPM = ORIGINAL_BPM + 20;
-const TEMPO_SCALE = ORIGINAL_BPM / TARGET_BPM;
-
-function scaleDurations(section) {
-  return section.map(([mel, chord, bass, dur]) => 
-    [mel, chord, bass, dur * TEMPO_SCALE]
-  );
-}
-
-const intro = scaleDurations([
+// Base durations (seconds). We'll scale them by BPM.
+const baseIntro = [
   ["E4","C","C3",0.6],["G4","C","C3",0.6],["A4","F","F3",0.6],["G4","F","F3",0.6]
-]);
-const song = scaleDurations([
+];
+const baseSong = [
   ["C4","C","C3",0.6],["C4","C","C3",0.6],["E4","C","C3",0.6],["G4","C","C3",0.6],
   ["G4","F","F3",0.6],["E4","F","F3",0.6],["D4","G","G3",0.6],["C4","G","G3",0.6],
   ["E4","Am","A3",0.6],["E4","Am","A3",0.6],["G4","F","F3",0.6],["A4","F","F3",0.6],
   ["G4","C","C3",0.6],["E4","C","C3",0.6],["D4","G","G3",0.6],["C4","G","G3",1.2]
-]);
-const bridge = scaleDurations([
+];
+const baseBridge = [
   ["A4","Am","A3",0.6],["G4","F","F3",0.6],["E4","G","G3",0.6],["F4","C","C3",0.6]
-]);
-const outro = scaleDurations([
+];
+const baseOutro = [
   ["C4","C","C3",0.6],["E4","C","C3",0.6],["G4","C","C3",1.8]
-]);
+];
 
+/* ===================== Tempo & scaling ===================== */
+const ORIGINAL_BPM = 100;
+const TARGET_BPM = ORIGINAL_BPM + 20; // +20 BPM
+const TEMPO_SCALE = ORIGINAL_BPM / TARGET_BPM; // scale durations to go faster
+
+function scaleDurations(section) {
+  return section.map(([mel, chord, bass, dur]) => [mel, chord, bass, dur * TEMPO_SCALE]);
+}
+
+const intro = scaleDurations(baseIntro);
+const song = scaleDurations(baseSong);
+const bridge = scaleDurations(baseBridge);
+const outro = scaleDurations(baseOutro);
+
+/* ===================== Audio helpers ===================== */
 function playTone(ctx, freq, dur, start, type="sawtooth", vol=0.2) {
-  if (freq===0) return;
+  if (!freq) return;
   const osc = ctx.createOscillator();
   const gain = ctx.createGain();
   const filter = ctx.createBiquadFilter();
 
   osc.type = type;
-  osc.frequency.value = freq;
+  osc.frequency.setValueAtTime(freq, start);
 
   filter.type = "lowpass";
   filter.frequency.setValueAtTime(8000, start);
@@ -112,35 +120,55 @@ function playTone(ctx, freq, dur, start, type="sawtooth", vol=0.2) {
   filter.connect(gain);
   gain.connect(ctx.destination);
 
+  // Smooth attack/release for legato feel
+  const attack = Math.min(0.05, dur * 0.25);
+  const release = Math.min(0.06, dur * 0.25);
   gain.gain.setValueAtTime(0, start);
-  gain.gain.linearRampToValueAtTime(vol, start+0.05);
-  gain.gain.linearRampToValueAtTime(vol*0.9, start+dur-0.05);
-  gain.gain.linearRampToValueAtTime(0, start+dur);
+  gain.gain.linearRampToValueAtTime(vol, start + attack);
+  gain.gain.setValueAtTime(vol, start + Math.max(attack, dur - release));
+  gain.gain.linearRampToValueAtTime(0.0001, start + dur);
 
+  // Slight overlap to avoid choppiness
   osc.start(start);
-  osc.stop(start+dur+0.05);
+  osc.stop(start + dur + 0.05);
 }
 
 function playBackgroundPad(ctx, chord, start, dur) {
+  // Warm triangle pad one octave down
   CHORDS[chord].forEach(n => {
     const osc = ctx.createOscillator();
     const gain = ctx.createGain();
+    const filter = ctx.createBiquadFilter();
+
     osc.type = "triangle";
-    osc.frequency.value = NOTES[n]/2;
-    osc.connect(gain);
+    osc.frequency.setValueAtTime(NOTES[n] / 2, start);
+
+    filter.type = "lowpass";
+    filter.frequency.setValueAtTime(4000, start);
+
+    osc.connect(filter);
+    filter.connect(gain);
     gain.connect(ctx.destination);
-    gain.gain.setValueAtTime(0.05, start);
-    gain.gain.linearRampToValueAtTime(0.04, start+dur);
+
+    gain.gain.setValueAtTime(0.035, start);
+    gain.gain.linearRampToValueAtTime(0.03, start + dur);
+
     osc.start(start);
-    osc.stop(start+dur);
+    osc.stop(start + dur);
   });
 }
 
+// Beat-reactive neon pulse
 function pulseNeon() {
-  document.documentElement.style.setProperty('--glow-strength', 2);
+  document.documentElement.style.setProperty("--glow-strength", "2");
   setTimeout(() => {
-    document.documentElement.style.setProperty('--glow-strength', 1);
+    document.documentElement.style.setProperty("--glow-strength", "1");
   }, 100);
+}
+
+function schedulePulseAt(ctx, start) {
+  const delayMs = Math.max(0, (start - ctx.currentTime) * 1000);
+  setTimeout(pulseNeon, delayMs);
 }
 
 function playDrum(ctx, type, start, vol=0.3) {
@@ -152,63 +180,87 @@ function playDrum(ctx, type, start, vol=0.3) {
   if (type === "kick") {
     osc.type = "sine";
     osc.frequency.setValueAtTime(150, start);
-    osc.frequency.exponentialRampToValueAtTime(50, start + 0.15);
-    setTimeout(pulseNeon, (start - ctx.currentTime) * 1000);
+    osc.frequency.exponentialRampToValueAtTime(50, start + 0.12);
+    schedulePulseAt(ctx, start);
   } else if (type === "snare") {
     osc.type = "triangle";
-    osc.frequency.setValueAtTime(200, start);
-    setTimeout(pulseNeon, (start - ctx.currentTime) * 1000);
+    osc.frequency.setValueAtTime(220, start);
+    schedulePulseAt(ctx, start);
   } else if (type === "hihat") {
+    // Simple noise-like hiss using high square; short tick
     osc.type = "square";
-    osc.frequency.setValueAtTime(400, start);
+    osc.frequency.setValueAtTime(500, start);
   }
 
   gain.gain.setValueAtTime(vol, start);
-  gain.gain.exponentialRampToValueAtTime(0.001, start + 0.1);
+  gain.gain.exponentialRampToValueAtTime(0.001, start + 0.09);
 
   osc.start(start);
   osc.stop(start + 0.1);
 }
 
-function playSection(ctx, section, dynamics=1.0, t) {
+/* ===================== Sequencing ===================== */
+function playSection(ctx, section, dynamics, t) {
   section.forEach(([mel, chord, bass, dur], i) => {
-    playTone(ctx, NOTES[mel], dur, t, "sawtooth", 0.25*dynamics);
-    CHORDS[chord].forEach(n => playTone(ctx, NOTES[n], dur, t, "triangle", 0.12*dynamics));
-    playTone(ctx, NOTES[bass], dur, t, "square", 0.18*dynamics);
-    playBackgroundPad(ctx, chord, t, dur*2);
+    // Lead
+    playTone(ctx, NOTES[mel], dur, t, "sawtooth", 0.24 * dynamics);
+    // Harmony
+    CHORDS[chord].forEach(n => playTone(ctx, NOTES[n], dur, t, "triangle", 0.12 * dynamics));
+    // Bass
+    playTone(ctx, NOTES[bass], dur, t, "square", 0.18 * dynamics);
+    // Background pad (longer to glue)
+    playBackgroundPad(ctx, chord, t, dur * 2);
 
-    if (Math.random() > 0.2) playDrum(ctx, "hihat", t, 0.12*dynamics
-                                      function playSection(ctx, section, dynamics=1.0, t) {
-      section.forEach(([mel, chord, bass, dur], i) => {
-        // Lead melody
-        playTone(ctx, NOTES[mel], dur, t, "sawtooth", 0.25 * dynamics);
-        // Chords
-        CHORDS[chord].forEach(n =>
-          playTone(ctx, NOTES[n], dur, t, "triangle", 0.12 * dynamics)
-                             );
-        // Bass
-        playTone(ctx, NOTES[bass], dur, t, "square", 0.18 * dynamics);
-        // Background pad
-        playBackgroundPad(ctx, chord, t, dur * 2);
+    // Groove drums + visual pulse
+    if (i % 4 === 0) playDrum(ctx, "kick", t, 0.32 * dynamics);
+    if (i % 4 === 2) playDrum(ctx, "snare", t + dur * 0.02, 0.26 * dynamics);
+    if (Math.random() > 0.2) playDrum(ctx, "hihat", t, 0.12 * dynamics);
 
-        // Drums
-        if (Math.random() > 0.2) playDrum(ctx, "hihat", t, 0.12 * dynamics);
-        if (i % 4 === 0) playDrum(ctx, "kick", t, 0.3 * dynamics);
-        if (i % 4 === 2) playDrum(ctx, "snare", t, 0.25 * dynamics);
+    // Slight timing overlap for flow
+    t += dur * 0.95;
+  });
+  return t;
+}
 
-        // Slight overlap for smoother feel
-        t += dur * 0.95;
-      });
-      return t;
-    }
-    function playSong() {
-      const ctx = new (window.AudioContext || window.webkitAudioContext)();
-      let t = ctx.currentTime + 0.1;
+let audioCtx = null;
+let isPlaying = false;
 
-      // Play sections in order
-      t = playSection(ctx, intro, 0.6, t);
-      t = playSection(ctx, song, 0.85, t);
-      t = playSection(ctx, bridge, 0.75, t);
-      t = playSection(ctx, song, 1.0, t);
-      t = playSection(ctx, outro, 0.5, t);
-    }
+async function playSong() {
+  if (isPlaying) return;
+  isPlaying = true;
+
+  // Ensure single AudioContext created on user gesture
+  if (!audioCtx) {
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  }
+  // Some browsers start suspended; resume on click
+  if (audioCtx.state !== "running") {
+    try { await audioCtx.resume(); } catch(e) {}
+  }
+
+  const btn = document.getElementById("playBtn");
+  btn.disabled = true;
+  btn.textContent = "Playing...";
+
+  let t = audioCtx.currentTime + 0.15;
+  t = playSection(audioCtx, intro, 0.65, t);
+  t = playSection(audioCtx, song, 0.9, t);
+  t = playSection(audioCtx, bridge, 0.8, t);
+  t = playSection(audioCtx, song, 1.0, t);
+  t = playSection(audioCtx, outro, 0.6, t);
+
+  // Re-enable button when playback is likely over
+  const totalMs = Math.max(0, (t - audioCtx.currentTime) * 1000) + 300;
+  setTimeout(() => {
+    btn.disabled = false;
+    btn.textContent = "Play Song";
+    isPlaying = false;
+  }, totalMs);
+}
+
+// Bind button
+document.getElementById("playBtn").addEventListener("click", playSong);
+</script>
+
+</body>
+</html>
