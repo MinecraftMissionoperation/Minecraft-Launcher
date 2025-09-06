@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
-<title>One-Minute Concert Band</title>
+<title>One-Minute Expanded Concert Band</title>
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <style>
   body { font-family: Arial, sans-serif; padding: 20px; }
@@ -12,45 +12,56 @@
 </style>
 </head>
 <body>
-  <h1>🎶 One-Minute Concert Band</h1>
-  <p>Click play to hear a full band arrangement with realistic instruments.</p>
+  <h1>🎶 One-Minute Expanded Concert Band</h1>
+  <p>Click play to hear a full band arrangement with an even bigger instrument lineup.</p>
   <button id="playBtn">Play Song</button>
   <div id="status"></div>
   <div id="error"></div>
 
-  <!-- Load Soundfont-Player -->
   <script src="https://unpkg.com/soundfont-player@0.15.7/dist/soundfont-player.js"></script>
   <script>
-  const BPM = 120;                 // beats per minute
-  const BEAT = 60 / BPM;           // seconds per beat
-  const BAR = BEAT * 4;            // 4/4 time
-  const TOTAL_BARS = 30;           // 30 bars = 60 seconds at 120 BPM
-  const MASTER_GAIN = 0.9;
+  const BPM = 120;
+  const BEAT = 60 / BPM;
+  const BAR = BEAT * 4;
+  const TOTAL_BARS = 30;
 
   const INSTRUMENTS = {
+    piccolo: 'piccolo',
     flute: 'flute',
     clarinet: 'clarinet',
+    bassClarinet: 'bass_clarinet',
     oboe: 'oboe',
     bassoon: 'bassoon',
     altoSax: 'alto_sax',
+    tenorSax: 'tenor_sax',
     trumpet: 'trumpet',
-    trombone: 'trombone',
     horn: 'french_horn',
+    trombone: 'trombone',
+    euphonium: 'euphonium',
     tuba: 'tuba',
     piano: 'acoustic_grand_piano',
+    celesta: 'celesta',
     bass: 'acoustic_bass',
     glock: 'glockenspiel',
+    vibraphone: 'vibraphone',
+    marimba: 'marimba',
     xylo: 'xylophone',
-    timp: 'timpani'
+    timp: 'timpani',
+    snare: 'snare_drum',
+    cymbal: 'crash_cymbal',
+    bassDrum: 'bass_drum'
   };
 
+  const PROG = [
+    {root:'G', type:'maj'},
+    {root:'E', type:'min'},
+    {root:'C', type:'maj'},
+    {root:'D', type:'maj'}
+  ];
+
+  let ac, loaded = {}, started = false;
   const statusEl = document.getElementById('status');
   const errorEl = document.getElementById('error');
-  const playBtn = document.getElementById('playBtn');
-
-  let ac;
-  let loaded = {};
-  let started = false;
 
   function setStatus(msg) { statusEl.textContent = msg; }
   function setError(msg) { errorEl.textContent = msg; }
@@ -69,113 +80,76 @@
 
   function chord(root, type='maj', octave=3) {
     const map = { maj: [0,4,7], min: [0,3,7] };
-    const semis = map[type];
-    return semis.map(s => transpose(root + octave, s));
+    return map[type].map(s => transpose(root + octave, s));
   }
-
-  const PROG = [
-    {root:'G', type:'maj'},
-    {root:'E', type:'min'},
-    {root:'C', type:'maj'},
-    {root:'D', type:'maj'}
-  ];
 
   function scheduleSong() {
     const startAt = ac.currentTime + 0.1;
 
-    // Piano chords
+    // Piano + celesta chords
     for (let bar = 0; bar < TOTAL_BARS; bar++) {
       const t = bar * BAR;
-      const chordInfo = PROG[bar % PROG.length];
-      const triad = chord(chordInfo.root, chordInfo.type, 4);
+      const {root, type} = PROG[bar % PROG.length];
+      const triad = chord(root, type, 4);
       [0, 2].forEach(beat => {
         triad.forEach((n, i) => {
-          loaded.piano.play(n, startAt + t + beat*BEAT + i*0.01, { gain: 0.08, duration: 0.22 });
+          loaded.piano.play(n, startAt + t + beat*BEAT + i*0.01, { gain: 0.07, duration: 0.22 });
+          loaded.celesta.play(n, startAt + t + beat*BEAT + i*0.01, { gain: 0.05, duration: 0.22 });
         });
       });
     }
 
-    // Bass line (tuba + acoustic bass alternating)
+    // Bass line (tuba + bass + euphonium)
     for (let bar = 0; bar < TOTAL_BARS; bar++) {
       const t = bar * BAR;
-      const chordInfo = PROG[bar % PROG.length];
-      const root = chordInfo.root + '2';
-      const isEven = bar % 2 === 0;
-      const inst = isEven ? loaded.tuba : loaded.bass;
-      inst.play(root, startAt + t, { gain: 0.18, duration: 0.35 });
-      const fifth = transpose(root, 7);
-      inst.play(fifth, startAt + t + 2*BEAT, { gain: 0.16, duration: 0.35 });
+      const {root} = PROG[bar % PROG.length];
+      const rootNote = root + '2';
+      [loaded.tuba, loaded.bass, loaded.euphonium].forEach((inst, idx) => {
+        inst.play(rootNote, startAt + t + idx*0.05, { gain: 0.15, duration: 0.35 });
+      });
     }
 
-    // Horns & trombones on backbeats
+    // Brass stabs (trumpet, horn, trombone)
     for (let bar = 0; bar < TOTAL_BARS; bar++) {
       const t = bar * BAR;
-      const chordInfo = PROG[bar % PROG.length];
-      const triad3 = chord(chordInfo.root, chordInfo.type, 3);
+      const {root, type} = PROG[bar % PROG.length];
+      const triad3 = chord(root, type, 3);
       [1, 3].forEach(beat => {
         triad3.forEach(n => {
-          loaded.horn.play(n, startAt + t + beat*BEAT, { gain: 0.14, duration: 0.45 });
-          loaded.trombone.play(n, startAt + t + beat*BEAT + 0.02, { gain: 0.14, duration: 0.45 });
+          loaded.trumpet.play(n, startAt + t + beat*BEAT, { gain: 0.14, duration: 0.45 });
+          loaded.horn.play(n, startAt + t + beat*BEAT + 0.02, { gain: 0.14, duration: 0.45 });
+          loaded.trombone.play(n, startAt + t + beat*BEAT + 0.04, { gain: 0.14, duration: 0.45 });
         });
       });
     }
 
-    // Glockenspiel + xylophone offbeats
+    // Woodwind melody (piccolo, flute, clarinet, bass clarinet, oboe, bassoon, saxes)
+    const winds = [loaded.piccolo, loaded.flute, loaded.clarinet, loaded.bassClarinet, loaded.oboe, loaded.bassoon, loaded.altoSax, loaded.tenorSax];
     for (let bar = 0; bar < TOTAL_BARS; bar++) {
       const t = bar * BAR;
-      const chordInfo = PROG[bar % PROG.length];
-      const triad5 = chord(chordInfo.root, chordInfo.type, 5);
-      [0.5, 1.5, 2.5, 3.5].forEach(off => {
-        loaded.glock.play(triad5[0], startAt + t + off*BEAT, { gain: 0.1, duration: 0.18 });
-        loaded.xylo.play(triad5[1], startAt + t + off*BEAT + 0.02, { gain: 0.1, duration: 0.18 });
-      });
-    }
-
-    // Timpani hits
-    for (let bar = 0; bar < TOTAL_BARS; bar += 2) {
-      const t = bar * BAR;
-      const chordInfo = PROG[bar % PROG.length];
-      loaded.timp.play(chordInfo.root + '2', startAt + t, { gain: 0.22, duration: 0.6 });
-    }
-
-    // Simple woodwind melody (flute/clarinet/oboe/alto sax rotating)
-    const wws = [loaded.flute, loaded.clarinet, loaded.oboe, loaded.altoSax];
-    for (let bar = 0; bar < TOTAL_BARS; bar++) {
-      const t = bar * BAR;
-      const lead = wws[bar % wws.length];
+      const lead = winds[bar % winds.length];
       const note = ['G5','A5','B5','C6','D6','E6','F#6'][bar % 7];
       lead.play(note, startAt + t, { gain: 0.16, duration: 0.35 });
     }
 
-    // End hit
-    const endBar = TOTAL_BARS - 1;
-    const tEnd = endBar * BAR;
-    ['G4','D4','G3'].forEach(n => {
-      loaded.trumpet.play(n, startAt + tEnd, { gain: 0.18, duration: 1.0 });
-      loaded.horn.play(n, startAt + tEnd, { gain: 0.18, duration: 1.0 });
-    });
+    // Mallet percussion (glock, vibraphone, marimba, xylophone)
+    for (let bar = 0; bar < TOTAL_BARS; bar++) {
+      const t = bar * BAR;
+      const {root, type} = PROG[bar % PROG.length];
+      const triad5 = chord(root, type, 5);
+      [0.5, 1.5, 2.5, 3.5].forEach(off => {
+        [loaded.glock, loaded.vibraphone, loaded.marimba, loaded.xylo].forEach((inst, idx) => {
+          inst.play(triad5[idx % triad5.length], startAt + t + off*BEAT + idx*0.01, { gain: 0.08, duration: 0.18 });
+        });
+      });
+    }
 
-    setTimeout(() => setStatus('Done!'), 60000);
-  }
+    // Percussion: timpani, snare, cymbal, bass drum
+    for (let bar = 0; bar < TOTAL_BARS; bar++) {
+      const t = bar * BAR;
+      if (bar % 2 === 0) loaded.timp.play(PROG[bar % PROG.length].root + '2', startAt + t, { gain: 0.2, duration: 0.6 });
+      loaded.snare.play('C3', startAt + t + 1*BEAT, { gain: 0.12, duration: 0.1 });
+      loaded.cymbal.play('C4', startAt + t + 3*BEAT, { gain: 0.15, duration: 1.0 });
+      if (bar % 4 === 0) loaded.bassDrum.play('C2', startAt + t, { gain: 0.18, duration: 0.5 });
+    }
 
-  async function loadInstruments() {
-    setStatus('Loading instruments...');
-    const names = Object.values(INSTRUMENTS);
-    const keys = Object.keys(INSTRUMENTS);
-    const loaders = names.map(n => Soundfont.instrument(ac, n, { gain: 0.9 }));
-    const res = await Promise.all(loaders);
-    keys.forEach((k, i) => loaded[k] = res[i]);
-    setStatus('Ready. Playing...');
-  }
-
-  playBtn.addEventListener('click', async () => {
-    try {
-      if (!started) {
-        // Create audio context on first click
-        ac = new (window.AudioContext || window.webkitAudioContext)();
-        started = true;
-        await loadInstruments();
-      }
-      // Once instruments are loaded, schedule the song
-      scheduleSong();
-    } catch (e
