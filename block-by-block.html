@@ -178,38 +178,37 @@ function playSection(ctx, section, dynamics=1.0, t) {
     playBackgroundPad(ctx, chord, t, dur*2);
 
     if (Math.random() > 0.2) playDrum(ctx, "hihat", t, 0.12*dynamics
-function playSection(ctx, section, dynamics=1.0, t) {
-  section.forEach(([mel, chord, bass, dur], i) => {
-    // Lead melody
-    playTone(ctx, NOTES[mel], dur, t, "sawtooth", 0.25 * dynamics);
-    // Chords
-    CHORDS[chord].forEach(n =>
-      playTone(ctx, NOTES[n], dur, t, "triangle", 0.12 * dynamics)
-    );
-    // Bass
-    playTone(ctx, NOTES[bass], dur, t, "square", 0.18 * dynamics);
-    // Background pad
-    playBackgroundPad(ctx, chord, t, dur * 2);
+                                      function playSection(ctx, section, dynamics=1.0, t) {
+      section.forEach(([mel, chord, bass, dur], i) => {
+        // Lead melody
+        playTone(ctx, NOTES[mel], dur, t, "sawtooth", 0.25 * dynamics);
+        // Chords
+        CHORDS[chord].forEach(n =>
+          playTone(ctx, NOTES[n], dur, t, "triangle", 0.12 * dynamics)
+                             );
+        // Bass
+        playTone(ctx, NOTES[bass], dur, t, "square", 0.18 * dynamics);
+        // Background pad
+        playBackgroundPad(ctx, chord, t, dur * 2);
 
-    // Drums
-    if (Math.random() > 0.2) playDrum(ctx, "hihat", t, 0.12 * dynamics);
-    if (i % 4 === 0) playDrum(ctx, "kick", t, 0.3 * dynamics);
-    if (i % 4 === 2) playDrum(ctx, "snare", t, 0.25 * dynamics);
+        // Drums
+        if (Math.random() > 0.2) playDrum(ctx, "hihat", t, 0.12 * dynamics);
+        if (i % 4 === 0) playDrum(ctx, "kick", t, 0.3 * dynamics);
+        if (i % 4 === 2) playDrum(ctx, "snare", t, 0.25 * dynamics);
 
-    // Slight overlap for smoother feel
-    t += dur * 0.95;
-  });
-  return t;
-}
+        // Slight overlap for smoother feel
+        t += dur * 0.95;
+      });
+      return t;
+    }
+    function playSong() {
+      const ctx = new (window.AudioContext || window.webkitAudioContext)();
+      let t = ctx.currentTime + 0.1;
 
-function playSong() {
-  const ctx = new (window.AudioContext || window.webkitAudioContext)();
-  let t = ctx.currentTime + 0.1;
-
-  // Play sections in order
-  t = playSection(ctx, intro, 0.6, t);
-  t = playSection(ctx, song, 0.85, t);
-  t = playSection(ctx, bridge, 0.75, t);
-  t = playSection(ctx, song, 1.0, t);
-  t = playSection(ctx, outro, 0.5, t);
-}
+      // Play sections in order
+      t = playSection(ctx, intro, 0.6, t);
+      t = playSection(ctx, song, 0.85, t);
+      t = playSection(ctx, bridge, 0.75, t);
+      t = playSection(ctx, song, 1.0, t);
+      t = playSection(ctx, outro, 0.5, t);
+    }
