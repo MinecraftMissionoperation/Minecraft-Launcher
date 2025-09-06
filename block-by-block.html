@@ -1,266 +1,62 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>🎵 Block by Block – Beat Reactive Neon</title>
-<style>
-  :root { --glow-strength: 1; }
-
-  body {
-    margin: 0;
-    height: 100vh;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
-    font-family: "Segoe UI", system-ui, sans-serif;
-    color: white;
-    text-align: center;
-    background: linear-gradient(270deg, #ff00ff, #00ffff, #ff9900, #00ff99);
-    background-size: 800% 800%;
-    animation: neonBG 14s ease infinite;
-    filter: brightness(calc(0.85 + var(--glow-strength) * 0.35));
-    transition: filter 0.1s ease;
-  }
-
-  @keyframes neonBG {
-    0% { background-position: 0% 50%; }
-    50% { background-position: 100% 50%; }
-    100% { background-position: 0% 50%; }
-  }
-
-  h1 {
-    font-size: 2.4rem;
-    line-height: 1.2;
-    margin: 0 16px 20px;
-    text-shadow: 0 0 10px #fff, 0 0 20px #ff00ff, 0 0 30px #00ffff;
-  }
-
-  button {
-    padding: 14px 28px;
-    font-size: 1.1rem;
-    border: none;
-    border-radius: 10px;
-    background: #111;
-    color: white;
-    cursor: pointer;
-    box-shadow: 0 0 10px #ff00ff, 0 0 20px #00ffff;
-    transition: transform 0.2s ease, box-shadow 0.3s ease, opacity 0.2s ease;
-  }
-  button:hover { transform: scale(1.05); box-shadow: 0 0 20px #ff00ff, 0 0 40px #00ffff; }
-  button:disabled { opacity: 0.6; cursor: not-allowed; }
-</style>
+<meta charset="UTF-8">
+<title>One-Minute Band Song</title>
 </head>
 <body>
-
-<h1>🎵 Block by Block – Beat Reactive Neon</h1>
+<h1>🎶 One-Minute Full Band Song</h1>
 <button id="playBtn">Play Song</button>
 
 <script>
-/* ===================== Music data ===================== */
-const NOTES = {
-  "C4":261.63,"D4":293.66,"E4":329.63,"F4":349.23,"G4":392.00,"A4":440.00,"B4":493.88,
-  "C3":130.81,"D3":146.83,"E3":164.81,"F3":174.61,"G3":196.00,"A3":220.00,"B3":246.94,
-  "REST":0
-};
+const AudioContext = window.AudioContext || window.webkitAudioContext;
+const ctx = new AudioContext();
 
-const CHORDS = {
-  "C":["C4","E4","G4"],
-  "F":["F4","A4","C4"],
-  "G":["G4","B4","D4"],
-  "Am":["A4","C4","E4"]
-};
-
-// Base durations (seconds). We'll scale them by BPM.
-const baseIntro = [
-  ["E4","C","C3",0.6],["G4","C","C3",0.6],["A4","F","F3",0.6],["G4","F","F3",0.6]
-];
-const baseSong = [
-  ["C4","C","C3",0.6],["C4","C","C3",0.6],["E4","C","C3",0.6],["G4","C","C3",0.6],
-  ["G4","F","F3",0.6],["E4","F","F3",0.6],["D4","G","G3",0.6],["C4","G","G3",0.6],
-  ["E4","Am","A3",0.6],["E4","Am","A3",0.6],["G4","F","F3",0.6],["A4","F","F3",0.6],
-  ["G4","C","C3",0.6],["E4","C","C3",0.6],["D4","G","G3",0.6],["C4","G","G3",1.2]
-];
-const baseBridge = [
-  ["A4","Am","A3",0.6],["G4","F","F3",0.6],["E4","G","G3",0.6],["F4","C","C3",0.6]
-];
-const baseOutro = [
-  ["C4","C","C3",0.6],["E4","C","C3",0.6],["G4","C","C3",1.8]
-];
-
-/* ===================== Tempo & scaling ===================== */
-const ORIGINAL_BPM = 100;
-const TARGET_BPM = ORIGINAL_BPM + 20; // +20 BPM
-const TEMPO_SCALE = ORIGINAL_BPM / TARGET_BPM; // scale durations to go faster
-
-function scaleDurations(section) {
-  return section.map(([mel, chord, bass, dur]) => [mel, chord, bass, dur * TEMPO_SCALE]);
-}
-
-const intro = scaleDurations(baseIntro);
-const song = scaleDurations(baseSong);
-const bridge = scaleDurations(baseBridge);
-const outro = scaleDurations(baseOutro);
-
-/* ===================== Audio helpers ===================== */
-function playTone(ctx, freq, dur, start, type="sawtooth", vol=0.2) {
-  if (!freq) return;
-  const osc = ctx.createOscillator();
-  const gain = ctx.createGain();
-  const filter = ctx.createBiquadFilter();
-
-  osc.type = type;
-  osc.frequency.setValueAtTime(freq, start);
-
-  filter.type = "lowpass";
-  filter.frequency.setValueAtTime(8000, start);
-
-  osc.connect(filter);
-  filter.connect(gain);
-  gain.connect(ctx.destination);
-
-  // Smooth attack/release for legato feel
-  const attack = Math.min(0.05, dur * 0.25);
-  const release = Math.min(0.06, dur * 0.25);
-  gain.gain.setValueAtTime(0, start);
-  gain.gain.linearRampToValueAtTime(vol, start + attack);
-  gain.gain.setValueAtTime(vol, start + Math.max(attack, dur - release));
-  gain.gain.linearRampToValueAtTime(0.0001, start + dur);
-
-  // Slight overlap to avoid choppiness
-  osc.start(start);
-  osc.stop(start + dur + 0.05);
-}
-
-function playBackgroundPad(ctx, chord, start, dur) {
-  // Warm triangle pad one octave down
-  CHORDS[chord].forEach(n => {
+function playNote(freq, startTime, duration, type="sine", volume=0.2) {
     const osc = ctx.createOscillator();
     const gain = ctx.createGain();
-    const filter = ctx.createBiquadFilter();
-
-    osc.type = "triangle";
-    osc.frequency.setValueAtTime(NOTES[n] / 2, start);
-
-    filter.type = "lowpass";
-    filter.frequency.setValueAtTime(4000, start);
-
-    osc.connect(filter);
-    filter.connect(gain);
-    gain.connect(ctx.destination);
-
-    gain.gain.setValueAtTime(0.035, start);
-    gain.gain.linearRampToValueAtTime(0.03, start + dur);
-
-    osc.start(start);
-    osc.stop(start + dur);
-  });
+    osc.type = type;
+    osc.frequency.value = freq;
+    gain.gain.value = volume;
+    osc.connect(gain).connect(ctx.destination);
+    osc.start(startTime);
+    osc.stop(startTime + duration);
 }
 
-// Beat-reactive neon pulse
-function pulseNeon() {
-  document.documentElement.style.setProperty("--glow-strength", "2");
-  setTimeout(() => {
-    document.documentElement.style.setProperty("--glow-strength", "1");
-  }, 100);
-}
+// Instrument frequency sets (simulating timbres)
+const instruments = [
+    {name: "Flute", freqs: [880, 988], type: "sine"},
+    {name: "Clarinet", freqs: [440, 554], type: "square"},
+    {name: "Oboe", freqs: [660, 784], type: "triangle"},
+    {name: "Bassoon", freqs: [220, 247], type: "sawtooth"},
+    {name: "Saxophone", freqs: [392, 440], type: "square"},
+    {name: "Trumpet", freqs: [523, 659], type: "square"},
+    {name: "Trombone", freqs: [196, 220], type: "triangle"},
+    {name: "French Horn", freqs: [330, 392], type: "sawtooth"},
+    {name: "Tuba", freqs: [110, 130], type: "triangle"},
+    {name: "Piano", freqs: [262, 330], type: "sine"},
+    {name: "String Bass", freqs: [98, 110], type: "triangle"},
+    {name: "Glockenspiel", freqs: [1046, 1174], type: "sine"},
+    {name: "Snare", freqs: [200, 300], type: "square"},
+    {name: "Bass Drum", freqs: [60, 80], type: "sine"},
+    {name: "Cymbals", freqs: [2000, 2500], type: "triangle"},
+    {name: "Timpani", freqs: [130, 196], type: "sine"}
+];
 
-function schedulePulseAt(ctx, start) {
-  const delayMs = Math.max(0, (start - ctx.currentTime) * 1000);
-  setTimeout(pulseNeon, delayMs);
-}
+document.getElementById("playBtn").addEventListener("click", () => {
+    const start = ctx.currentTime;
+    let t = start;
+    const beat = 0.25; // quarter beat
 
-function playDrum(ctx, type, start, vol=0.3) {
-  const osc = ctx.createOscillator();
-  const gain = ctx.createGain();
-  osc.connect(gain);
-  gain.connect(ctx.destination);
-
-  if (type === "kick") {
-    osc.type = "sine";
-    osc.frequency.setValueAtTime(150, start);
-    osc.frequency.exponentialRampToValueAtTime(50, start + 0.12);
-    schedulePulseAt(ctx, start);
-  } else if (type === "snare") {
-    osc.type = "triangle";
-    osc.frequency.setValueAtTime(220, start);
-    schedulePulseAt(ctx, start);
-  } else if (type === "hihat") {
-    // Simple noise-like hiss using high square; short tick
-    osc.type = "square";
-    osc.frequency.setValueAtTime(500, start);
-  }
-
-  gain.gain.setValueAtTime(vol, start);
-  gain.gain.exponentialRampToValueAtTime(0.001, start + 0.09);
-
-  osc.start(start);
-  osc.stop(start + 0.1);
-}
-
-/* ===================== Sequencing ===================== */
-function playSection(ctx, section, dynamics, t) {
-  section.forEach(([mel, chord, bass, dur], i) => {
-    // Lead
-    playTone(ctx, NOTES[mel], dur, t, "sawtooth", 0.24 * dynamics);
-    // Harmony
-    CHORDS[chord].forEach(n => playTone(ctx, NOTES[n], dur, t, "triangle", 0.12 * dynamics));
-    // Bass
-    playTone(ctx, NOTES[bass], dur, t, "square", 0.18 * dynamics);
-    // Background pad (longer to glue)
-    playBackgroundPad(ctx, chord, t, dur * 2);
-
-    // Groove drums + visual pulse
-    if (i % 4 === 0) playDrum(ctx, "kick", t, 0.32 * dynamics);
-    if (i % 4 === 2) playDrum(ctx, "snare", t + dur * 0.02, 0.26 * dynamics);
-    if (Math.random() > 0.2) playDrum(ctx, "hihat", t, 0.12 * dynamics);
-
-    // Slight timing overlap for flow
-    t += dur * 0.95;
-  });
-  return t;
-}
-
-let audioCtx = null;
-let isPlaying = false;
-
-async function playSong() {
-  if (isPlaying) return;
-  isPlaying = true;
-
-  // Ensure single AudioContext created on user gesture
-  if (!audioCtx) {
-    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-  }
-  // Some browsers start suspended; resume on click
-  if (audioCtx.state !== "running") {
-    try { await audioCtx.resume(); } catch(e) {}
-  }
-
-  const btn = document.getElementById("playBtn");
-  btn.disabled = true;
-  btn.textContent = "Playing...";
-
-  let t = audioCtx.currentTime + 0.15;
-  t = playSection(audioCtx, intro, 0.65, t);
-  t = playSection(audioCtx, song, 0.9, t);
-  t = playSection(audioCtx, bridge, 0.8, t);
-  t = playSection(audioCtx, song, 1.0, t);
-  t = playSection(audioCtx, outro, 0.6, t);
-
-  // Re-enable button when playback is likely over
-  const totalMs = Math.max(0, (t - audioCtx.currentTime) * 1000) + 300;
-  setTimeout(() => {
-    btn.disabled = false;
-    btn.textContent = "Play Song";
-    isPlaying = false;
-  }, totalMs);
-}
-
-// Bind button
-document.getElementById("playBtn").addEventListener("click", playSong);
+    // Loop through 60 seconds worth of beats
+    for (let i = 0; i < 240; i++) {
+        instruments.forEach((inst, idx) => {
+            const freq = inst.freqs[i % inst.freqs.length];
+            playNote(freq, t, beat * 0.9, inst.type, 0.05);
+        });
+        t += beat;
+    }
+});
 </script>
-
 </body>
 </html>
