@@ -2,10 +2,10 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Block by Block – Full Band Version</title>
+<title>Block by Block – Full Band</title>
 </head>
 <body>
-<h1>🎵 Block by Block – Full Band</h1>
+<h1>🎵 Block by Block – Full Band Version</h1>
 <button onclick="playSong()">Play Song</button>
 
 <script>
@@ -42,7 +42,7 @@ const outro = [
 ];
 
 // Play pitched tone
-function playTone(ctx, freq, dur, start, type="sine", vol=0.2) {
+function playTone(ctx, freq, dur, start, type="sine", vol=0.2, sustain=0.1) {
   if (freq===0) return;
   const osc = ctx.createOscillator();
   const gain = ctx.createGain();
@@ -53,14 +53,14 @@ function playTone(ctx, freq, dur, start, type="sine", vol=0.2) {
 
   gain.gain.setValueAtTime(0, start);
   gain.gain.linearRampToValueAtTime(vol, start+0.02);
-  gain.gain.linearRampToValueAtTime(vol*0.8, start+dur);
-  gain.gain.linearRampToValueAtTime(0, start+dur+0.05);
+  gain.gain.linearRampToValueAtTime(vol, start+dur);
+  gain.gain.linearRampToValueAtTime(0, start+dur+sustain);
 
   osc.start(start);
-  osc.stop(start+dur+0.05);
+  osc.stop(start+dur+sustain);
 }
 
-// Randomised drums
+// Drums
 function playDrum(ctx, type, start, vol=0.3) {
   const osc = ctx.createOscillator();
   const gain = ctx.createGain();
@@ -77,30 +77,35 @@ function playDrum(ctx, type, start, vol=0.3) {
   } else if (type === "hihat") {
     osc.type = "square";
     osc.frequency.setValueAtTime(400, start);
+  } else if (type === "tom") {
+    osc.type = "sine";
+    osc.frequency.setValueAtTime(120, start);
+    osc.frequency.exponentialRampToValueAtTime(80, start + 0.2);
   }
 
   gain.gain.setValueAtTime(vol, start);
   gain.gain.exponentialRampToValueAtTime(0.001, start + 0.1);
 
   osc.start(start);
-  osc.stop(start + 0.1);
+  osc.stop(start + 0.3);
 }
 
 function playSection(ctx, section, dynamics=1.0, t) {
   section.forEach(([mel, chord, bass, dur], i) => {
-    // Melody (lead)
-    playTone(ctx, NOTES[mel], dur, t, "sawtooth", 0.25*dynamics);
-    // Chords (pad)
-    CHORDS[chord].forEach(n => playTone(ctx, NOTES[n], dur*2, t, "triangle", 0.12*dynamics));
-    // Bass
-    playTone(ctx, NOTES[bass], dur, t, "square", 0.18*dynamics);
-    // Extra pluck
-    playTone(ctx, NOTES[mel], 0.25, t, "square", 0.1*dynamics);
+    // Lead melody
+    playTone(ctx, NOTES[mel], dur, t, "sawtooth", 0.25*dynamics, 0.15);
+    // Pad chords
+    CHORDS[chord].forEach(n => playTone(ctx, NOTES[n], dur*2, t, "triangle", 0.12*dynamics, 0.3));
+    // Bass guitar
+    playTone(ctx, NOTES[bass], dur, t, "square", 0.18*dynamics, 0.2);
+    // Rhythm guitar (arpeggio)
+    CHORDS[chord].forEach((n, idx) => playTone(ctx, NOTES[n], 0.25, t + idx*0.1, "square", 0.08*dynamics, 0.05));
 
-    // Randomised drums
-    if (Math.random() > 0.3) playDrum(ctx, "hihat", t, 0.12*dynamics);
-    if (Math.random() > 0.7) playDrum(ctx, "kick", t, 0.25*dynamics);
-    if (Math.random() > 0.8) playDrum(ctx, "snare", t, 0.2*dynamics);
+    // Drums: varied pattern
+    if (Math.random() > 0.2) playDrum(ctx, "hihat", t, 0.12*dynamics);
+    if (i % 4 === 0) playDrum(ctx, "kick", t, 0.3*dynamics);
+    if (i % 4 === 2) playDrum(ctx, "snare", t, 0.25*dynamics);
+    if (Math.random() > 0.85) playDrum(ctx, "tom", t+0.25, 0.2*dynamics);
 
     t += dur;
   });
