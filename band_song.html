@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>One-Minute Concert Band</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<style>
+  body { font-family: Arial, sans-serif; padding: 20px; }
+  button { padding: 10px 16px; font-size: 16px; cursor: pointer; }
+  #status { margin-top: 10px; color: green; }
+  #error { margin-top: 10px; color: red; white-space: pre-wrap; }
+</style>
+</head>
+<body>
+  <h1>🎶 One-Minute Concert Band</h1>
+  <p>Click play to hear a full band arrangement with realistic instruments.</p>
+  <button id="playBtn">Play</button>
+  <div id="status"></div>
+  <div id="error"></div>
+
+  <!-- Load Soundfont-Player -->
+  <script src="https://unpkg.com/soundfont-player@0.15.7/dist/soundfont-player.js"></script>
+  <script>
+  const BPM = 120;                 // beats per minute
+  const BEAT = 60 / BPM;           // seconds per beat
+  const BAR = BEAT * 4;            // 4/4 time
+  const TOTAL_BARS = 30;           // 30 bars = 60 seconds at 120 BPM
+  const MASTER_GAIN = 0.9;
+
+  const INSTRUMENTS = {
+    flute: 'flute',
+    clarinet: 'clarinet',
+    oboe: 'oboe',
+    bassoon: 'bassoon',
+    altoSax: 'alto_sax',
+    trumpet: 'trumpet',
+    trombone: 'trombone',
+    horn: 'french_horn',
+    tuba: 'tuba',
+    piano: 'acoustic_grand_piano',
+    bass: 'acoustic_bass',
+    glock: 'glockenspiel',
+    xylo: 'xylophone',
+    timp: 'timpani'
+  };
+
+  const statusEl = document.getElementById('status');
+  const errorEl = document.getElementById('error');
+  const playBtn = document.getElementById('playBtn');
+
+  let ac;
+  let loaded = {};
+  let started = false;
+
+  function setStatus(msg) { statusEl.textContent = msg; }
+  function setError(msg) { errorEl.textContent = msg; }
+
+  function transpose(note, semitones) {
+    const order = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
+    const m = note.match(/^([A-G]#?)(-?\d)$/);
+    if (!m) return note;
+    const idx = order.indexOf(m[1]);
+    const octave = parseInt(m[2], 10);
+    let n = idx + semitones;
+    let newOct = octave + Math.floor(n / 12);
+    n = ((n % 12) + 12) % 12;
+    return order[n] + newOct;
+  }
+
+  function chord(root, type='maj', octave=3) {
+    const map = { maj: [0,4,7], min: [0,3,7] };
+    const semis = map[type];
+    return semis.map(s => transpose(root + octave, s));
+  }
+
+  const PROG = [
+    {root:'G', type:'maj'},
+    {root:'E', type:'min'},
+    {root:'C', type:'maj'},
+    {root:'D', type:'maj'}
+  ];
+
+  function scheduleSong() {
+    const startAt = ac.currentTime + 0.1;
+
+    // Piano chords
+    for (let bar = 0; bar < TOTAL_BARS; bar++) {
+      const t = bar * BAR;
+      const chordInfo = PROG[bar % PROG.length];
+      const triad = chord(chordInfo.root, chordInfo.type, 4);
+      [0, 2].forEach(beat => {
+        triad.forEach((n, i) => {
+          loaded.piano.play(n, startAt + t + beat*BEAT + i*0.01, { gain: 0.08, duration: 0.22 });
+        });
+      });
+    }
+
+    // Bass line (tuba + acoustic bass alternating)
+    for (let bar = 0; bar < TOTAL_BARS; bar++) {
+      const t = bar * BAR;
+      const chordInfo = PROG[bar % PROG.length];
+      const root = chordInfo.root + '2';
+      const isEven = bar % 2 === 0;
+      const inst = isEven ? loaded.tuba : loaded.bass;
+      inst.play(root, startAt + t, { gain: 0.18, duration: 0.35 });
+      const fifth = transpose(root, 7);
+      inst.play(fifth, startAt + t + 2*BEAT, { gain: 0.16, duration: 0.35 });
+    }
+
+    // Horns & trombones on backbeats
+    for (let bar = 0; bar < TOTAL_BARS; bar++) {
+      const t = bar * BAR;
+      const chordInfo = PROG[bar % PROG.length];
+      const triad3 = chord(chordInfo.root, chordInfo.type, 3);
+      [1, 3].forEach(beat => {
+        triad3.forEach(n => {
+          loaded.horn.play(n, startAt + t + beat*BEAT, { gain: 0.14, duration: 0.45 });
+          loaded.trombone.play(n, startAt + t + beat*BEAT + 0.02, { gain: 0.14, duration: 0.45 });
+        });
+      });
+    }
+
+    // Glockenspiel + xylophone offbeats
+    for (let bar = 0; bar < TOTAL_BARS; bar++) {
+      const t = bar * BAR;
+      const chordInfo = PROG[bar % PROG.length];
+      const triad5 = chord(chordInfo.root, chordInfo.type, 5);
+      [0.5, 1.5, 2.5, 3.5].forEach(off => {
+        loaded.glock.play(triad5[0], startAt + t + off*BEAT, { gain: 0.1, duration: 0.18 });
+        loaded.xylo.play(triad5[1], startAt + t + off*BEAT + 0.02, { gain: 0.1, duration: 0.18 });
+      });
+    }
+
+    // Timpani hits
+    for (let bar = 0; bar < TOTAL_BARS; bar += 2) {
+      const t = bar * BAR;
+      const chordInfo = PROG[bar % PROG.length];
+      loaded.timp.play(chordInfo.root + '2', startAt + t, { gain: 0.22, duration: 0.6 });
+    }
+
+    // Simple woodwind melody (flute/clarinet/oboe/alto sax rotating)
+    const wws = [loaded.flute, loaded.clarinet, loaded.oboe, loaded.altoSax];
+    for (let bar = 0; bar < TOTAL_BARS; bar++) {
+      const t = bar * BAR;
+      const lead = wws[bar % wws.length];
+      const note = ['G5','A5','B5','C6','D6','E6','F#6'][bar % 7];
+      lead.play(note, startAt + t, { gain: 0.16, duration: 0.35 });
+    }
+
+    // End hit
+    const endBar = TOTAL_BARS - 1;
+    const tEnd = endBar * BAR;
+    ['G4','D4','G3'].forEach(n => {
+      loaded.trumpet.play(n, startAt + tEnd, { gain: 0.18, duration: 1.0 });
+      loaded.horn.play(n, startAt + tEnd, { gain: 0.18, duration: 1.0 });
+    });
+
+    setTimeout(() => setStatus('Done!'), 60000);
+  }
+
+  async function loadInstruments() {
+    setStatus('Loading instruments...');
+    const names = Object.values(INSTRUMENTS);
+    const keys = Object.keys(INSTRUMENTS);
+    const loaders = names.map(n => Soundfont.instrument(ac, n, { gain: 0.9 }));
+    const res = await Promise.all(loaders);
+    keys.forEach((k, i) => loaded[k] = res[i]);
+    setStatus('Ready. Playing...');
+  }
+
+  playBtn.addEventListener('click', async () => {
+    try {
+      if (!started) {
+        ac = new (window.AudioContext || window.webkitAudioContext)();
+        started = true;
+        await loadInstruments();
