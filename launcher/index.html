@@ -18,6 +18,7 @@
       --border: rgba(160, 32, 240, 0.5);
       --text: #ffffff;
       --muted: #dddddd;
+      --black-80: rgba(0,0,0,0.8);
     }
     body {
       font-family: 'Orbitron', sans-serif;
@@ -29,7 +30,7 @@
       position: relative;
       background: #0b0216;
     }
-    /* Animated gradient background */
+    /* Background layers */
     body::before {
       content: "";
       position: fixed;
@@ -39,7 +40,6 @@
       animation: gradientMove 20s ease infinite;
       z-index: -3;
     }
-    /* Stars */
     body::after {
       content: "";
       position: fixed;
@@ -160,21 +160,6 @@
       line-height: 1.6;
       color: var(--muted);
     }
-    .home-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-      gap: 1rem;
-      margin-top: 0.25rem;
-    }
-    .stat {
-      background: var(--glass-strong);
-      border: 1.5px solid var(--border);
-      border-radius: 10px;
-      padding: 0.9rem;
-      box-shadow: 0 0 8px rgba(160, 32, 240, 0.35);
-    }
-    .stat .label { font-size: 0.8rem; color: #cfa6ff; opacity: 0.9; }
-    .stat .value { font-size: 1.1rem; margin-top: 0.25rem; }
 
     /* Cards */
     .game-link {
@@ -193,19 +178,6 @@
       overflow: hidden;
       min-height: 260px;
     }
-    .game-link::after {
-      content: "";
-      position: absolute;
-      inset: -40%;
-      background: radial-gradient(closest-side, rgba(255,0,255,0.08), transparent 70%);
-      transform: translate(-50%, -50%);
-      top: var(--hover-y, -200px);
-      left: var(--hover-x, -200px);
-      pointer-events: none;
-      transition: opacity 0.2s ease;
-      opacity: 0;
-    }
-    .game-link:hover::after { opacity: 1; }
     .game-link:hover {
       background: rgba(160, 32, 240, 0.18);
       transform: translateY(-5px);
@@ -250,6 +222,8 @@
       background: rgba(160,32,240,0.12);
       transition: all 0.2s ease;
       font-size: 0.9rem;
+      cursor: pointer;
+      user-select: none;
     }
     .btn:hover {
       background: rgba(160,32,240,0.28);
@@ -272,6 +246,60 @@
       color: var(--muted);
       font-size: 0.85rem;
       opacity: 0.85;
+    }
+
+    /* Modal */
+    .modal {
+      position: fixed;
+      inset: 0;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 999;
+      background: rgba(0,0,0,0.6);
+      padding: 1rem;
+    }
+    .modal.open { display: flex; }
+    .modal-dialog {
+      width: min(640px, 100%);
+      background: rgba(20, 0, 40, 0.92);
+      border: 2px solid var(--border);
+      border-radius: 14px;
+      box-shadow: 0 0 18px rgba(160, 32, 240, 0.75), 0 0 42px rgba(255, 0, 255, 0.25);
+      color: var(--text);
+      overflow: hidden;
+    }
+    .modal-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0.9rem 1.1rem;
+      border-bottom: 1px solid var(--border);
+      background: linear-gradient(90deg, rgba(160,32,240,0.15), transparent);
+    }
+    .modal-title {
+      font-weight: 700;
+      text-shadow: 0 0 6px var(--primary);
+      font-size: 1.05rem;
+    }
+    .modal-close {
+      background: transparent;
+      border: 1.5px solid var(--primary);
+      color: var(--text);
+      border-radius: 8px;
+      padding: 0.2rem 0.55rem;
+      cursor: pointer;
+      transition: background 0.2s ease, box-shadow 0.2s ease;
+    }
+    .modal-close:hover {
+      background: rgba(160,32,240,0.25);
+      box-shadow: 0 0 10px var(--primary);
+    }
+    .modal-body {
+      padding: 1rem 1.1rem 1.1rem;
+      line-height: 1.6;
+      color: var(--muted);
+      white-space: pre-wrap;
     }
 
     /* Responsive tweaks */
@@ -302,21 +330,6 @@
         <p><strong>What this site is about:</strong> Your all‑in‑one launchpad for classic, modern, and experimental Eaglercraft builds—organized, fast, and polished.</p>
         <p><strong>Who made it:</strong> Crafted by <span style="color:#ff66ff;">Missionoperation</span> to bring Minecraft‑in‑the‑browser to everyone with style and simplicity.</p>
         <p><strong>Why it was made:</strong> So you can jump between versions, discover new features, and play instantly—no link‑hunting, no fuss.</p>
-
-        <div class="home-grid" aria-label="Quick stats">
-          <div class="stat">
-            <div class="label">Available tabs</div>
-            <div class="value">Client, Hacked, Normal, Extra</div>
-          </div>
-          <div class="stat">
-            <div class="label">Quick tip</div>
-            <div class="value">Right‑click and open in new tab for split‑screen sessions.</div>
-          </div>
-          <div class="stat">
-            <div class="label">Theme</div>
-            <div class="value">Neon cyberpunk with glass panels and starfield background</div>
-          </div>
-        </div>
       </div>
     </section>
 
@@ -328,7 +341,14 @@
         <div class="card-meta">Balanced performance and visuals</div>
         <div class="card-actions">
           <span class="btn" aria-label="Launch Client v1">Launch</span>
-          <span class="btn" aria-label="Info about Client v1">Info</span>
+          <span class="btn info-btn"
+                role="button"
+                tabindex="0"
+                aria-haspopup="dialog"
+                data-title="Client v1 — Stable"
+                data-info="Client v1 is the stable baseline build focused on balanced performance and visuals. Recommended for most players and school devices. Supports common servers, includes quality-of-life UI polish, and aims for minimal crashes.">
+            Info
+          </span>
         </div>
       </a>
 
@@ -338,7 +358,14 @@
         <div class="card-meta">Updated UI and bug fixes</div>
         <div class="card-actions">
           <span class="btn" aria-label="Launch Client v2">Launch</span>
-          <span class="btn" aria-label="Changelog for Client v2">Changelog</span>
+          <span class="btn info-btn"
+                role="button"
+                tabindex="0"
+                aria-haspopup="dialog"
+                data-title="Client v2 — Polished"
+                data-info="Client v2 refines the UI, improves stability, and adjusts default keybinds for faster setup. Good for everyday play with slightly higher GPU usage than v1 due to visual tweaks.">
+            Info
+          </span>
         </div>
       </a>
 
@@ -348,7 +375,14 @@
         <div class="card-meta">Classic experience, widest compatibility</div>
         <div class="card-actions">
           <span class="btn" aria-label="Launch Client Legacy">Launch</span>
-          <span class="btn" aria-label="Legacy notes">Notes</span>
+          <span class="btn info-btn"
+                role="button"
+                tabindex="0"
+                aria-haspopup="dialog"
+                data-title="Client Legacy — Classic"
+                data-info="Legacy client aimed at maximum compatibility with older browsers and low‑end hardware. Minimal effects, conservative memory profile, and the most familiar menus.">
+            Info
+          </span>
         </div>
       </a>
     </section>
@@ -361,7 +395,14 @@
         <div class="card-meta">Feature‑rich with toggles for testing</div>
         <div class="card-actions">
           <span class="btn" aria-label="Launch Hacked Client A">Launch</span>
-          <span class="btn" aria-label="Module list for Hacked Client A">Modules</span>
+          <span class="btn info-btn"
+                role="button"
+                tabindex="0"
+                aria-haspopup="dialog"
+                data-title="Hacked Client A — Experimental"
+                data-info="Packed with experimental modules intended for testing in private worlds. Includes visual enhancements and debug overlays. Expect occasional instability.">
+            Info
+          </span>
         </div>
       </a>
 
@@ -371,7 +412,14 @@
         <div class="card-meta">Alternative config and UI layout</div>
         <div class="card-actions">
           <span class="btn" aria-label="Launch Hacked Client B">Launch</span>
-          <span class="btn" aria-label="Controls for Hacked Client B">Controls</span>
+          <span class="btn info-btn"
+                role="button"
+                tabindex="0"
+                aria-haspopup="dialog"
+                data-title="Hacked Client B — Alt UI"
+                data-info="Alternative layout with an emphasis on simplified toggles and minimal HUD clutter. Lighter than Client A but still experimental.">
+            Info
+          </span>
         </div>
       </a>
     </section>
@@ -384,7 +432,14 @@
         <div class="card-meta">Nostalgic and lightweight</div>
         <div class="card-actions">
           <span class="btn" aria-label="Launch Minecraft 1.5.2">Launch</span>
-          <span class="btn" aria-label="Patch notes for 1.5.2">Notes</span>
+          <span class="btn info-btn"
+                role="button"
+                tabindex="0"
+                aria-haspopup="dialog"
+                data-title="Minecraft 1.5.2 — Classic"
+                data-info="A classic lightweight build known for broad compatibility and smooth performance on school laptops and older devices. Great for casual survival and creative sessions.">
+            Info
+          </span>
         </div>
       </a>
 
@@ -394,7 +449,14 @@
         <div class="card-meta">PVP‑friendly, widely loved</div>
         <div class="card-actions">
           <span class="btn" aria-label="Launch Minecraft 1.8.8">Launch</span>
-          <span class="btn" aria-label="View keybinds for 1.8.8">Keybinds</span>
+          <span class="btn info-btn"
+                role="button"
+                tabindex="0"
+                aria-haspopup="dialog"
+                data-title="Minecraft 1.8.8 — PVP Favorite"
+                data-info="Popular for combat due to hit‑reg and timing feel. Slightly heavier than 1.5.2 but still performs well on most Chromebooks with moderate settings.">
+            Info
+          </span>
         </div>
       </a>
 
@@ -404,7 +466,14 @@
         <div class="card-meta">Ultra‑fast on low‑end devices</div>
         <div class="card-actions">
           <span class="btn" aria-label="Launch Minecraft 1.3.7">Launch</span>
-          <span class="btn" aria-label="View performance tips for 1.3.7">Tips</span>
+          <span class="btn info-btn"
+                role="button"
+                tabindex="0"
+                aria-haspopup="dialog"
+                data-title="Minecraft 1.3.7 — Speed Build"
+                data-info="Streamlined build targeting the weakest hardware. Minimal effects, fastest load, and lowest memory footprint. Ideal when battery is low or CPU throttling.">
+            Info
+          </span>
         </div>
       </a>
     </section>
@@ -417,7 +486,14 @@
         <div class="card-meta">Enhanced lighting and effects</div>
         <div class="card-actions">
           <span class="btn" aria-label="Launch Shaders Build">Launch</span>
-          <span class="btn" aria-label="Graphics settings for Shaders Build">Graphics</span>
+          <span class="btn info-btn"
+                role="button"
+                tabindex="0"
+                aria-haspopup="dialog"
+                data-title="Shaders Build — Visual Upgrade"
+                data-info="Adds shader support for dynamic lighting and shadows. Requires stronger GPU and will consume more battery. Best for screenshots and cinematic play.">
+            Info
+          </span>
         </div>
       </a>
 
@@ -427,7 +503,14 @@
         <div class="card-meta">Curated extras and tweaks</div>
         <div class="card-actions">
           <span class="btn" aria-label="Launch Modpack">Launch</span>
-          <span class="btn" aria-label="View mod list">Mods</span>
+          <span class="btn info-btn"
+                role="button"
+                tabindex="0"
+                aria-haspopup="dialog"
+                data-title="Modpack — Curated Extras"
+                data-info="A selection of lightweight mods tuned for browser play: interface tweaks, small QoL enhancements, and optional visuals. Check mod list for details.">
+            Info
+          </span>
         </div>
       </a>
 
@@ -437,7 +520,14 @@
         <div class="card-meta">Latest experimental build</div>
         <div class="card-actions">
           <span class="btn" aria-label="Launch Snapshot">Launch</span>
-          <span class="btn" aria-label="Snapshot changelog">Changelog</span>
+          <span class="btn info-btn"
+                role="button"
+                tabindex="0"
+                aria-haspopup="dialog"
+                data-title="Snapshot — Cutting Edge"
+                data-info="Newest features, frequent changes, and potential bugs. Use to preview upcoming tweaks. Not recommended for long sessions without saving.">
+            Info
+          </span>
         </div>
       </a>
     </section>
@@ -447,50 +537,49 @@
     © <span id="year"></span> MissionOperation • Neon theme by you • Replace links and thumbnails as needed
   </footer>
 
+  <!-- Info Modal -->
+  <div id="infoModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle" aria-describedby="modalBody">
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <div id="modalTitle" class="modal-title">Info</div>
+        <button type="button" class="modal-close" id="modalClose" aria-label="Close dialog">✕</button>
+      </div>
+      <div id="modalBody" class="modal-body"></div>
+    </div>
+  </div>
+
   <script>
-    // Tab logic with state persistence
     (function() {
+      // Tabs
       const tabButtons = Array.from(document.querySelectorAll('.tab-btn'));
       const tabs = Array.from(document.querySelectorAll('.tab-content'));
-      const key = 'eaglercraft-active-tab';
+      const storageKey = 'eaglercraft-active-tab';
 
-      function activate(tabId, focusPanel = false) {
+      function activateTab(tabId, focusPanel = false) {
         tabButtons.forEach(btn => {
           const isActive = btn.dataset.tab === tabId;
           btn.classList.toggle('active', isActive);
           btn.setAttribute('aria-selected', String(isActive));
           btn.tabIndex = isActive ? 0 : -1;
         });
-        tabs.forEach(p => {
-          const isActive = p.id === tabId;
-          p.classList.toggle('active', isActive);
-          p.hidden = !isActive;
-          if (isActive && focusPanel) p.focus({ preventScroll: true });
+        tabs.forEach(panel => {
+          const isActive = panel.id === tabId;
+          panel.classList.toggle('active', isActive);
+          panel.hidden = !isActive;
+          if (isActive && focusPanel) panel.focus({ preventScroll: true });
         });
-        try { localStorage.setItem(key, tabId); } catch {}
-        history.replaceState(null, '', `#${tabId}`);
+        try { localStorage.setItem(storageKey, tabId); } catch {}
+        history.replaceState(null, '', '#' + tabId);
       }
 
-      // Restore from hash or localStorage
-      const initial = (location.hash || '').replace('#','') || (localStorage.getItem(key) || 'home');
-      if (tabs.some(t => t.id === initial)) activate(initial);
+      const initial = (location.hash || '').replace('#', '') || (localStorage.getItem(storageKey) || 'home');
+      if (tabs.some(t => t.id === initial)) activateTab(initial);
 
       tabButtons.forEach(btn => {
-        btn.addEventListener('click', e => {
-          activate(btn.dataset.tab, true);
-        });
-        btn.addEventListener('mousemove', e => {
-          // Fancy hover glow tracking
-          document.querySelectorAll(`#${btn.dataset.tab}.tab-content .game-link`).forEach(card => {
-            const rect = card.getBoundingClientRect();
-            card.style.setProperty('--hover-x', (e.clientX - rect.left) + 'px');
-            card.style.setProperty('--hover-y', (e.clientY - rect.top) + 'px');
-          });
-        });
+        btn.addEventListener('click', () => activateTab(btn.dataset.tab, true));
       });
 
-      // Keyboard navigation for tabs
-      document.addEventListener('keydown', (e) => {
+      document.addEventListener('keydown', e => {
         if (!['ArrowLeft','ArrowRight','Home','End'].includes(e.key)) return;
         const currentIdx = tabButtons.findIndex(b => b.classList.contains('active'));
         let nextIdx = currentIdx;
@@ -507,6 +596,46 @@
       // Footer year
       const y = document.getElementById('year');
       if (y) y.textContent = new Date().getFullYear();
+
+      // Modal logic (for every second button = info)
+      const modal = document.getElementById('infoModal');
+      const modalTitle = document.getElementById('modalTitle');
+      const modalBody = document.getElementById('modalBody');
+      const modalClose = document.getElementById('modalClose');
+      let lastFocused = null;
+
+      function openModal(title, text) {
+        lastFocused = document.activeElement;
+        modalTitle.textContent = title || 'Info';
+        modalBody.textContent = text || '';
+        modal.classList.add('open');
+        modalClose.focus();
+        // Lock background scroll
+        document.documentElement.style.overflow = 'hidden';
+      }
+      function closeModal() {
+        modal.classList.remove('open');
+        document.documentElement.style.overflow = '';
+        if (lastFocused && lastFocused.focus) lastFocused.focus();
+      }
+
+      document.querySelectorAll('.info-btn').forEach(btn => {
+        btn.addEventListener('click', () => openModal(btn.dataset.title, btn.dataset.info));
+        btn.addEventListener('keydown', e => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            openModal(btn.dataset.title, btn.dataset.info);
+          }
+        });
+      });
+
+      modal.addEventListener('click', e => {
+        if (e.target === modal) closeModal();
+      });
+      modalClose.addEventListener('click', closeModal);
+      document.addEventListener('keydown', e => {
+        if (e.key === 'Escape' && modal.classList.contains('open')) closeModal();
+      });
     })();
   </script>
 </body>
