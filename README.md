@@ -4,6 +4,16 @@ Eaglercraft Launcher is a **browser-based launcher** for accessing, testing, and
 
 ---
 
+# DMCA Notice
+
+All Eaglercraft versions, clients, and game builds linked or referenced in this launcher were **not created by me**. The source files, resources, and game links used in this project are provided by third-party authors and original developers. Credit and ownership of these builds belong entirely to their respective creators.
+
+If you are a copyright owner and believe your work is featured or linked in this repository without proper authorization, please contact me to request removal or provide clarification in accordance with the Digital Millennium Copyright Act (DMCA) guidelines. I will act promptly and in good faith to address any concerns, correct attribution, or remove material as needed.
+
+This launcher is intended as a **community aggregation point** for browser-accessible Minecraft builds. All links, titles, and resources remain under the trademark, copyright, or open license of their respective owners. No files are hosted or re-distributed by me beyond link aggregation. Please see the full DMCA policy for details on takedown requests and procedures[web:10][web:12].
+
+---
+
 ## Purpose
 
 The goal of Eaglercraft Launcher is to provide a central, user-friendly platform for launching and experimenting with different browser-based Minecraft versions, mod clients, and extra builds. Whether seeking nostalgia, speed, PvP enhancements, mod features, or alternative control schemes, this launcher puts everything a click away with rich descriptions and fast session management.
