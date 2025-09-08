@@ -10,7 +10,7 @@ All Eaglercraft versions, clients, and game builds linked or referenced in this 
 
 If you are a copyright owner and believe your work is featured or linked in this repository without proper authorization, please contact me to request removal or provide clarification in accordance with the Digital Millennium Copyright Act (DMCA) guidelines. I will act promptly and in good faith to address any concerns, correct attribution, or remove material as needed.
 
-This launcher is intended as a **community aggregation point** for browser-accessible Minecraft builds. All links, titles, and resources remain under the trademark, copyright, or open license of their respective owners. No files are hosted or re-distributed by me beyond link aggregation. Please see the full DMCA policy for details on takedown requests and procedures[web:10][web:12].
+This launcher is intended as a **community aggregation point** for browser-accessible Minecraft builds. All links, titles, and resources remain under the trademark, copyright, or open license of their respective owners. No files are hosted or re-distributed by me beyond link aggregation.
 
 ---
 
