@@ -1,1 +1,927 @@
+<!DOCTYPE html>
+<html lang="en">
 
+<head>
+    <meta charset="UTF-8" />
+    <title>Eaglercraft Launcher</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#0a0016" />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@500;700&display=swap" rel="stylesheet" />
+    <style>
+        :root {
+            --bg: #0a0016;
+            --panel: rgba(23, 7, 47, 0.55);
+            --panel-strong: rgba(23, 7, 47, 0.8);
+            --accent: #a659ff;
+            --accent-2: #5de3ff;
+            --text: #ffffff;
+            --muted: #c9b6ff;
+            --danger: #ff4d6d;
+            --ok: #48e07b;
+            --shadow: 0 10px 30px rgba(0, 0, 0, .45);
+            --radius: 14px;
+        }
+
+        * {
+            box-sizing: border-box
+        }
+
+        html,
+        body {
+            height: 100%
+        }
+
+        body {
+            margin: 0;
+            background:
+                radial-gradient(1200px 600px at 10% 0%, rgba(166, 89, 255, .15), transparent 60%),
+                radial-gradient(1200px 600px at 90% 0%, rgba(93, 227, 255, .12), transparent 60%),
+                var(--bg);
+            color: var(--text);
+            font-family: 'Inter', system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+            overflow: hidden;
+        }
+
+        /* Header + Tabs */
+        header {
+            position: relative;
+            z-index: 2;
+            padding: 16px 20px 8px;
+            text-align: center;
+            user-select: none;
+        }
+
+        .title {
+            font-weight: 700;
+            font-size: 24px;
+            letter-spacing: .5px;
+            text-shadow: 0 0 14px rgba(166, 89, 255, .55);
+        }
+
+        .subtitle {
+            margin-top: 4px;
+            font-size: 13px;
+            color: var(--muted);
+        }
+
+        nav {
+            position: relative;
+            z-index: 2;
+            display: flex;
+            gap: 8px;
+            justify-content: center;
+            padding: 10px 12px 18px;
+            flex-wrap: wrap;
+        }
+
+        .tab-btn {
+            border: 1px solid rgba(166, 89, 255, .5);
+            background: linear-gradient(180deg, rgba(166, 89, 255, .12), rgba(93, 227, 255, .08));
+            color: var(--text);
+            padding: 10px 14px;
+            border-radius: 999px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 14px;
+            transition: .18s ease;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, .2);
+            backdrop-filter: saturate(140%) blur(6px);
+        }
+
+        .tab-btn:hover {
+            transform: translateY(-1px);
+            background: linear-gradient(180deg, rgba(166, 89, 255, .18), rgba(93, 227, 255, .12))
+        }
+
+        .tab-btn.active {
+            background: linear-gradient(180deg, rgba(166, 89, 255, .28), rgba(93, 227, 255, .18));
+            border-color: var(--accent)
+        }
+
+        /* Main grid */
+        main {
+            position: absolute;
+            inset: 120px 0 0;
+            overflow: auto;
+            padding: 18px 18px 28px;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 14px;
+            max-width: 1200px;
+            margin: 0 auto 40px;
+        }
+
+        .tab-content {
+            display: none
+        }
+
+        .tab-content.active {
+            display: block
+        }
+
+        .card {
+            background: var(--panel);
+            border: 1px solid rgba(166, 89, 255, .35);
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            min-height: 280px;
+        }
+
+        .thumb {
+            height: 140px;
+            background: linear-gradient(90deg, rgba(166, 89, 255, .12), rgba(93, 227, 255, .12));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--muted);
+            font-size: 13px;
+            letter-spacing: .3px;
+            border-bottom: 1px solid rgba(166, 89, 255, .25);
+        }
+
+        .thumb img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block
+        }
+
+        .card-body {
+            padding: 12px 12px 10px;
+            display: flex;
+            flex-direction: column;
+            gap: 6px
+        }
+
+        .card-title {
+            font-weight: 700;
+            font-size: 16px
+        }
+
+        .card-meta {
+            font-size: 12px;
+            color: var(--muted)
+        }
+
+        .card-actions {
+            margin-top: auto;
+            display: flex;
+            gap: 8px
+        }
+
+        .btn {
+            flex: 1;
+            border: 1px solid rgba(166, 89, 255, .55);
+            background: linear-gradient(180deg, rgba(166, 89, 255, .16), rgba(93, 227, 255, .12));
+            color: var(--text);
+            padding: 9px 10px;
+            border-radius: 10px;
+            cursor: pointer;
+            font-weight: 700;
+            font-size: 13px;
+            transition: .16s ease;
+        }
+
+        .btn:hover {
+            transform: translateY(-1px);
+            background: linear-gradient(180deg, rgba(166, 89, 255, .24), rgba(93, 227, 255, .16))
+        }
+
+        .btn.secondary {
+            flex: 0 0 auto;
+            padding: 9px 12px;
+            font-weight: 600
+        }
+
+        .btn.danger {
+            border-color: rgba(255, 77, 109, .6);
+            background: linear-gradient(180deg, rgba(255, 77, 109, .22), rgba(255, 77, 109, .12))
+        }
+
+        .btn.ok {
+            border-color: rgba(72, 224, 123, .6);
+            background: linear-gradient(180deg, rgba(72, 224, 123, .22), rgba(72, 224, 123, .12))
+        }
+
+        /* Game view */
+        #gameContainer {
+            position: fixed;
+            inset: 0;
+            background: #000;
+            display: none;
+            z-index: 999;
+        }
+
+        #gameFrame {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            border: 0;
+            background: #000;
+        }
+
+        /* Top hover bar + overlay */
+        #hoverStrip {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 10px;
+            /* hover target after ESC */
+            pointer-events: auto;
+            z-index: 1001;
+        }
+
+        #gameOverlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            background: linear-gradient(180deg, rgba(10, 0, 22, .95), rgba(10, 0, 22, .75));
+            border-bottom: 1px solid rgba(166, 89, 255, .4);
+            box-shadow: 0 8px 30px rgba(0, 0, 0, .5);
+            backdrop-filter: blur(8px) saturate(140%);
+            padding: 10px 14px;
+            display: none;
+            align-items: center;
+            gap: 10px;
+            z-index: 1002;
+        }
+
+        .nowplaying {
+            font-weight: 700;
+            letter-spacing: .3px
+        }
+
+        .grow {
+            flex: 1
+        }
+
+        .overlay-actions {
+            display: flex;
+            gap: 8px
+        }
+
+        .pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            border: 1px solid rgba(166, 89, 255, .45);
+            background: linear-gradient(180deg, rgba(166, 89, 255, .16), rgba(93, 227, 255, .12));
+            color: var(--text);
+            padding: 8px 12px;
+            border-radius: 999px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: .15s ease;
+            user-select: none;
+        }
+
+        .pill:hover {
+            transform: translateY(-1px)
+        }
+
+        .pill.danger {
+            border-color: rgba(255, 77, 109, .6);
+            background: linear-gradient(180deg, rgba(255, 77, 109, .22), rgba(255, 77, 109, .12))
+        }
+
+        .pill.ok {
+            border-color: rgba(72, 224, 123, .6);
+            background: linear-gradient(180deg, rgba(72, 224, 123, .22), rgba(72, 224, 123, .12))
+        }
+
+        .hint {
+            font-size: 12px;
+            color: var(--muted);
+            margin-left: 6px
+        }
+
+        /* Info modal */
+        #infoModal {
+            position: fixed;
+            inset: 0;
+            display: none;
+            place-items: center;
+            z-index: 2000;
+            background: rgba(0, 0, 0, .55);
+        }
+
+        .modal {
+            width: min(720px, 92vw);
+            background: var(--panel-strong);
+            border: 1px solid rgba(166, 89, 255, .4);
+            border-radius: 16px;
+            box-shadow: 0 18px 60px rgba(0, 0, 0, .6);
+            overflow: hidden;
+        }
+
+        .modal-head {
+            padding: 14px 16px;
+            border-bottom: 1px solid rgba(166, 89, 255, .28);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+        }
+
+        .modal-title {
+            font-weight: 800
+        }
+
+        .modal-body {
+            padding: 14px 16px;
+            color: #e8dcff;
+            line-height: 1.5
+        }
+
+        .modal-close {
+            border: 1px solid rgba(166, 89, 255, .5);
+            background: transparent;
+            color: var(--text);
+            padding: 6px 10px;
+            border-radius: 10px;
+            cursor: pointer;
+            font-weight: 700;
+        }
+
+        /* Footer note */
+        footer {
+            position: relative;
+            z-index: 2;
+            text-align: center;
+            padding: 8px 12px 16px;
+            color: var(--muted);
+            font-size: 12px;
+        }
+
+        /* Scrollbars */
+        ::-webkit-scrollbar {
+            height: 10px;
+            width: 10px
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: rgba(166, 89, 255, .35);
+            border-radius: 999px
+        }
+
+        ::-webkit-scrollbar-track {
+            background: transparent
+        }
+    </style>
+</head>
+
+<body>
+
+    <header>
+        <div class="title">Eaglercraft Launcher</div>
+        <div class="subtitle">Launch all versions, clients, and extras directly in-site. Press ESC, then hover top to manage session.</div>
+    </header>
+
+    <nav>
+        <button class="tab-btn active" data-tab="normal">Normal</button>
+        <button class="tab-btn" data-tab="clients">Clients</button>
+        <button class="tab-btn" data-tab="hacked">Hacked Clients</button>
+        <button class="tab-btn" data-tab="extras">Extras</button>
+    </nav>
+
+    <main id="menu">
+        <!-- NORMAL -->
+        <section id="normal" class="tab-content active">
+            <div class="grid">
+                <!-- Eaglercraft Indev -->
+                <article class="card">
+                    <div class="thumb">Thumbnail: eaglercraftindev</div>
+                    <div class="card-body">
+                        <div class="card-title">Eaglercraft Indev</div>
+                        <div class="card-meta">Early development sandbox build for testing features and performance.</div>
+                        <div class="card-actions">
+                            <button class="btn launch-btn" data-title="Eaglercraft Indev" data-src="games/eaglercraftindev.html">Launch</button>
+                            <button class="btn secondary info-btn" data-title="Eaglercraft Indev" data-info="An experimental indev snapshot. Expect incomplete features and rough edges while core systems are validated.">Info</button>
+                        </div>
+                    </div>
+                </article>
+
+                <!-- 1.3 -->
+                <article class="card">
+                    <div class="thumb">Thumbnail: 1.3</div>
+                    <div class="card-body">
+                        <div class="card-title">Eaglercraft 1.3</div>
+                        <div class="card-meta">Classic adventure update era with lightweight performance.</div>
+                        <div class="card-actions">
+                            <button class="btn launch-btn" data-title="Eaglercraft 1.3" data-src="games/Eaglercraft1,3.html">Launch</button>
+                            <button class="btn secondary info-btn" data-title="Eaglercraft 1.3" data-info="A lean, nostalgic build capturing early survival feel and simplicity. Great for low-end devices.">Info</button>
+                        </div>
+                    </div>
+                </article>
+
+                <!-- 1.5.2 -->
+                <article class="card">
+                    <div class="thumb">Thumbnail: 1.5.2</div>
+                    <div class="card-body">
+                        <div class="card-title">Eaglercraft 1.5.2</div>
+                        <div class="card-meta">The Redstone Update era—stable and fast with broad mod history.</div>
+                        <div class="card-actions">
+                            <button class="btn launch-btn" data-title="Eaglercraft 1.5.2" data-src="games/Eaglercraft1,5,2.html">Launch</button>
+                            <button class="btn secondary info-btn" data-title="Eaglercraft 1.5.2" data-info="Known for solid performance and classic mechanics. A favorite for retro SMP and mini‑games.">Info</button>
+                        </div>
+                    </div>
+                </article>
+
+                <!-- 1.7.3 -->
+                <article class="card">
+                    <div class="thumb">Thumbnail: 1.7.3</div>
+                    <div class="card-body">
+                        <div class="card-title">Eaglercraft 1.7.3</div>
+                        <div class="card-meta">Pre‑Adventure classic with iconic terrain and simplicity.</div>
+                        <div class="card-actions">
+                            <button class="btn launch-btn" data-title="Eaglercraft 1.7.3" data-src="games/Eaglercraft1,7,3.html">Launch</button>
+                            <button class="btn secondary info-btn" data-title="Eaglercraft 1.7.3" data-info="Beloved for serene gameplay loop and old‑school world gen. Ideal for nostalgia runs.">Info</button>
+                        </div>
+                    </div>
+                </article>
+
+                <!-- 1.8.8 -->
+                <article class="card">
+                    <div class="thumb">Thumbnail: 1.8.8</div>
+                    <div class="card-body">
+                        <div class="card-title">Eaglercraft 1.8.8</div>
+                        <div class="card-meta">PvP staple with responsive combat and broad client support.</div>
+                        <div class="card-actions">
+                            <button class="btn launch-btn" data-title="Eaglercraft 1.8.8" data-src="games/Eaglercraft1,8,8.html">Launch</button>
+                            <button class="btn secondary info-btn" data-title="Eaglercraft 1.8.8" data-info="The go‑to for competitive PvP, bridging, and minigames thanks to stable hit‑reg and smooth FPS.">Info</button>
+                        </div>
+                    </div>
+                </article>
+
+                <!-- 1.9 -->
+                <article class="card">
+                    <div class="thumb">Thumbnail: 1.9</div>
+                    <div class="card-body">
+                        <div class="card-title">Eaglercraft 1.9</div>
+                        <div class="card-meta">Combat Update featuring shields and cooldown timing.</div>
+                        <div class="card-actions">
+                            <button class="btn launch-btn" data-title="Eaglercraft 1.9" data-src="games/eaglercraft1,9.html">Launch</button>
+                            <button class="btn secondary info-btn" data-title="Eaglercraft 1.9" data-info="A shift to tactical combat with timing and defense tools. Great for learning the ‘new’ meta.">Info</button>
+                        </div>
+                    </div>
+                </article>
+
+                <!-- 1.12.2 -->
+                <article class="card">
+                    <div class="thumb">Thumbnail: 1.12.2</div>
+                    <div class="card-body">
+                        <div class="card-title">Eaglercraft 1.12.2</div>
+                        <div class="card-meta">Modern classic baseline with wide content and stability.</div>
+                        <div class="card-actions">
+                            <button class="btn launch-btn" data-title="Eaglercraft 1.12.2" data-src="games/Eaglercraft1,12,2.html">Launch</button>
+                            <button class="btn secondary info-btn" data-title="Eaglercraft 1.12.2" data-info="A balanced feature set and polished performance—popular for modpacks, PvE, and building.">Info</button>
+                        </div>
+                    </div>
+                </article>
+            </div>
+        </section>
+
+        <!-- CLIENTS -->
+        <section id="clients" class="tab-content">
+            <div class="grid">
+                <!-- Astra -->
+                <article class="card">
+                    <div class="thumb">Thumbnail: Astra Client</div>
+                    <div class="card-body">
+                        <div class="card-title">Astra Client</div>
+                        <div class="card-meta">Sleek UI, performance toggles, and quality‑of‑life tools.</div>
+                        <div class="card-actions">
+                            <button class="btn launch-btn" data-title="Astra Client" data-src="games/Astra.html">Launch</button>
+                            <button class="btn secondary info-btn" data-title="Astra Client" data-info="Polished interface with FPS‑friendly defaults and clean HUD customization.">Info</button>
+                        </div>
+                    </div>
+                </article>
+
+                <!-- Kone -->
+                <article class="card">
+                    <div class="thumb">Thumbnail: Kone Client</div>
+                    <div class="card-body">
+                        <div class="card-title">Kone Client</div>
+                        <div class="card-meta">Streamlined overlays and simple config presets.</div>
+                        <div class="card-actions">
+                            <button class="btn launch-btn" data-title="Kone Client" data-src="games/Kone Client.html">Launch</button>
+                            <button class="btn secondary info-btn" data-title="Kone Client" data-info="Minimal, readable HUD with quick toggles for everyday PvP and casual play.">Info</button>
+                        </div>
+                    </div>
+                </article>
+
+                <!-- Pi -->
+                <article class="card">
+                    <div class="thumb">Thumbnail: Pi Client</div>
+                    <div class="card-body">
+                        <div class="card-title">Pi Client</div>
+                        <div class="card-meta">Lightweight, responsive, and tuned for low‑end devices.</div>
+                        <div class="card-actions">
+                            <button class="btn launch-btn" data-title="Pi Client" data-src="games/Pi Client.html">Launch</button>
+                            <button class="btn secondary info-btn" data-title="Pi Client" data-info="Focuses on performance and simplicity—great for integrated graphics or older laptops.">Info</button>
+                        </div>
+                    </div>
+                </article>
+
+                <!-- Resent -->
+                <article class="card">
+                    <div class="thumb">Thumbnail: Resent Client</div>
+                    <div class="card-body">
+                        <div class="card-title">Resent Client</div>
+                        <div class="card-meta">Modern look with modular UI elements and macros.</div>
+                        <div class="card-actions">
+                            <button class="btn launch-btn" data-title="Resent Client" data-src="games/Resent Client.html">Launch</button>
+                            <button class="btn secondary info-btn" data-title="Resent Client" data-info="Flexible panels and inputs for streamlined PvP utility.">Info</button>
+                        </div>
+                    </div>
+                </article>
+
+                <!-- Shadow -->
+                <article class="card">
+                    <div class="thumb">Thumbnail: Shadow Client</div>
+                    <div class="card-body">
+                        <div class="card-title">Shadow Client</div>
+                        <div class="card-meta">Dark theme visuals with smooth animations.</div>
+                        <div class="card-actions">
+                            <button class="btn launch-btn" data-title="Shadow Client" data-src="games/Shadow Client.html">Launch</button>
+                            <button class="btn secondary info-btn" data-title="Shadow Client" data-info="Sharp theming and crisp UI transitions that feel responsive in‑game.">Info</button>
+                        </div>
+                    </div>
+                </article>
+
+                <!-- Solar -->
+                <article class="card">
+                    <div class="thumb">Thumbnail: Solar Client</div>
+                    <div class="card-body">
+                        <div class="card-title">Solar Client</div>
+                        <div class="card-meta">Bright HUD, stats widgets, and clarity‑focused design.</div>
+                        <div class="card-actions">
+                            <button class="btn launch-btn" data-title="Solar Client" data-src="games/Solar Client.html">Launch</button>
+                            <button class="btn secondary info-btn" data-title="Solar Client" data-info="Readable overlays and configurable indicators for practice and grinding.">Info</button>
+                        </div>
+                    </div>
+                </article>
+            </div>
+        </section>
+
+        <!-- HACKED CLIENTS -->
+        <section id="hacked" class="tab-content">
+            <div class="grid">
+                <!-- DragonX V4 -->
+                <article class="card">
+                    <div class="thumb">Thumbnail: DragonX V4</div>
+                    <div class="card-body">
+                        <div class="card-title">DragonX V4</div>
+                        <div class="card-meta">Feature‑packed client for experimentation and testing.</div>
+                        <div class="card-actions">
+                            <button class="btn launch-btn" data-title="DragonX V4" data-src="games/DragonXV4.html">Launch</button>
+                            <button class="btn secondary info-btn" data-title="DragonX V4" data-info="Includes numerous toggles and modules; intended for private testing and sandbox use.">Info</button>
+                        </div>
+                    </div>
+                </article>
+
+                <!-- Nebula -->
+                <article class="card">
+                    <div class="thumb">Thumbnail: Nebula Client</div>
+                    <div class="card-body">
+                        <div class="card-title">Nebula Client</div>
+                        <div class="card-meta">Modular tools with granular configuration.</div>
+                        <div class="card-actions">
+                            <button class="btn launch-btn" data-title="Nebula Client" data-src="games/NebulaClient.html">Launch</button>
+                            <button class="btn secondary info-btn" data-title="Nebula Client" data-info="A wide library of toggles organized by categories for fine‑tuned testing.">Info</button>
+                        </div>
+                    </div>
+                </article>
+
+                <!-- OddFuture -->
+                <article class="card">
+                    <div class="thumb">Thumbnail: OddFuture Client</div>
+                    <div class="card-body">
+                        <div class="card-title">OddFuture Client</div>
+                        <div class="card-meta">Experimental features and rapid iteration builds.</div>
+                        <div class="card-actions">
+                            <button class="btn launch-btn" data-title="OddFuture Client" data-src="games/OddFutureClient.html">Launch</button>
+                            <button class="btn secondary info-btn" data-title="OddFuture Client" data-info="A playground for trying unusual concepts and niche toggles.">Info</button>
+                        </div>
+                    </div>
+                </article>
+
+                <!-- UwU -->
+                <article class="card">
+                    <div class="thumb">Thumbnail: UwU Client</div>
+                    <div class="card-body">
+                        <div class="card-title">UwU Client</div>
+                        <div class="card-meta">Stylized interface with accessible toggles.</div>
+                        <div class="card-actions">
+                            <button class="btn launch-btn" data-title="UwU Client" data-src="games/ UwUClient.html">Launch</button>
+                            <button class="btn secondary info-btn" data-title="UwU Client" data-info="A themed layout that keeps controls straightforward for quick testing.">Info</button>
+                        </div>
+                    </div>
+                </article>
+
+                <!-- fuchsiax -->
+                <article class="card">
+                    <div class="thumb">Thumbnail: fuchsiax</div>
+                    <div class="card-body">
+                        <div class="card-title">fuchsiax</div>
+                        <div class="card-meta">Lean module set with focus on responsiveness.</div>
+                        <div class="card-actions">
+                            <button class="btn launch-btn" data-title="fuchsiax" data-src="games/fuchsiax.html">Launch</button>
+                            <button class="btn secondary info-btn" data-title="fuchsiax" data-info="Light footprint and snappy toggles for experimenting with movement and visuals.">Info</button>
+                        </div>
+                    </div>
+                </article>
+            </div>
+        </section>
+
+        <!-- EXTRAS -->
+        <section id="extras" class="tab-content">
+            <div class="grid">
+                <!-- Paper Minecraft -->
+                <article class="card">
+                    <div class="thumb">Thumbnail: Paper Minecraft</div>
+                    <div class="card-body">
+                        <div class="card-title">Paper Minecraft</div>
+                        <div class="card-meta">2D browser take on core Minecraft mechanics.</div>
+                        <div class="card-actions">
+                            <button class="btn launch-btn" data-title="Paper Minecraft" data-src="games/paperminecraft.html">Launch</button>
+                            <button class="btn secondary info-btn" data-title="Paper Minecraft" data-info="A creative 2D adaptation—quick to load and fun for short sessions.">Info</button>
+                        </div>
+                    </div>
+                </article>
+
+                <!-- mobile2 -->
+                <article class="card">
+                    <div class="thumb">Thumbnail: Mobile 2</div>
+                    <div class="card-body">
+                        <div class="card-title">Mobile 2</div>
+                        <div class="card-meta">Alternative touch controls layout for phones and tablets.</div>
+                        <div class="card-actions">
+                            <button class="btn launch-btn" data-title="Mobile 2" data-src="games/mobile2.html">Launch</button>
+                            <button class="btn secondary info-btn" data-title="Mobile 2" data-info="Try this if the default mobile scheme doesn’t feel right on your device.">Info</button>
+                        </div>
+                    </div>
+                </article>
+
+                <!-- mobile -->
+                <article class="card">
+                    <div class="thumb">Thumbnail: Mobile</div>
+                    <div class="card-body">
+                        <div class="card-title">Mobile</div>
+                        <div class="card-meta">Standard touch control configuration for small screens.</div>
+                        <div class="card-actions">
+                            <button class="btn launch-btn" data-title="Mobile" data-src="games/mobile.html">Launch</button>
+                            <button class="btn secondary info-btn" data-title="Mobile" data-info="Default on‑screen controls tuned for phones; optimized UI spacing.">Info</button>
+                        </div>
+                    </div>
+                </article>
+
+                <!-- minecraft3d -->
+                <article class="card">
+                    <div class="thumb">Thumbnail: Minecraft 3D</div>
+                    <div class="card-body">
+                        <div class="card-title">Minecraft 3D</div>
+                        <div class="card-meta">A lightweight 3D rendition playable in the browser.</div>
+                        <div class="card-actions">
+                            <button class="btn launch-btn" data-title="Minecraft 3D" data-src="games/minecraft3d.html">Launch</button>
+                            <button class="btn secondary info-btn" data-title="Minecraft 3D" data-info="Experiment with a compact 3D engine and simplified gameplay loop.">Info</button>
+                        </div>
+                    </div>
+                </article>
+
+                <!-- Anotherminecraft -->
+                <article class="card">
+                    <div class="thumb">Thumbnail: Another Minecraft</div>
+                    <div class="card-body">
+                        <div class="card-title">Another Minecraft</div>
+                        <div class="card-meta">An alternate web build with its own quirks and tweaks.</div>
+                        <div class="card-actions">
+                            <button class="btn launch-btn" data-title="Another Minecraft" data-src="games/Anotherminecraft.html">Launch</button>
+                            <button class="btn secondary info-btn" data-title="Another Minecraft" data-info="Different feel and pacing—nice for quick creative experiments.">Info</button>
+                        </div>
+                    </div>
+                </article>
+            </div>
+        </section>
+    </main>
+
+    <!-- GAME CONTAINER -->
+    <section id="gameContainer" aria-label="Game container">
+        <!-- Invisible hover strip that becomes active after ESC -->
+        <div id="hoverStrip" title="Hover here after pressing ESC"></div>
+
+        <!-- Overlay -->
+        <div id="gameOverlay">
+            <div class="nowplaying" id="nowPlaying">Now Playing: —</div>
+            <div class="hint">Press ESC, then hover at the very top to reveal this menu.</div>
+            <div class="grow"></div>
+            <div class="overlay-actions">
+                <div class="pill ok" id="resumeGame">Resume</div>
+                <div class="pill danger" id="leaveGame">Leave and Return to Menu</div>
+            </div>
+        </div>
+
+        <!-- Fullscreen game -->
+        <iframe id="gameFrame" title="Game"></iframe>
+    </section>
+
+    <!-- INFO MODAL -->
+    <div id="infoModal" role="dialog" aria-modal="true" aria-labelledby="infoTitle">
+        <div class="modal">
+            <div class="modal-head">
+                <div class="modal-title" id="infoTitle">Info</div>
+                <button class="modal-close" id="infoClose">Close</button>
+            </div>
+            <div class="modal-body" id="infoBody"></div>
+        </div>
+    </div>
+
+    <footer>
+        Add or adjust the iframe URLs by editing each game’s data-src. Everything launches in-site—no new tabs.
+    </footer>
+
+    <script>
+        // Tabs
+        const tabs = document.querySelectorAll('.tab-btn');
+        const views = document.querySelectorAll('.tab-content');
+        tabs.forEach(btn => {
+            btn.addEventListener('click', () => {
+                tabs.forEach(b => b.classList.remove('active'));
+                views.forEach(v => v.classList.remove('active'));
+                btn.classList.add('active');
+                document.getElementById(btn.dataset.tab).classList.add('active');
+            });
+        });
+
+        // Elements
+        const menu = document.getElementById('menu');
+        const gameContainer = document.getElementById('gameContainer');
+        const gameFrame = document.getElementById('gameFrame');
+        const nowPlaying = document.getElementById('nowPlaying');
+        const overlay = document.getElementById('gameOverlay');
+        const hoverStrip = document.getElementById('hoverStrip');
+        const leaveBtn = document.getElementById('leaveGame');
+        const resumeBtn = document.getElementById('resumeGame');
+
+        // Info modal
+        const infoModal = document.getElementById('infoModal');
+        const infoBody = document.getElementById('infoBody');
+        const infoTitle = document.getElementById('infoTitle');
+        const infoClose = document.getElementById('infoClose');
+
+        document.querySelectorAll('.info-btn').forEach(b => {
+            b.addEventListener('click', () => {
+                infoTitle.textContent = b.dataset.title + ' — Info';
+                infoBody.textContent = b.dataset.info || 'No details provided.';
+                infoModal.style.display = 'grid';
+            });
+        });
+        infoClose.addEventListener('click', () => infoModal.style.display = 'none');
+        infoModal.addEventListener('click', (e) => {
+            if (e.target === infoModal) infoModal.style.display = 'none'
+        });
+
+        // Launch logic
+        let escArmed = false; // becomes true after ESC pressed
+        let currentTitle = '';
+
+        function launchGame(title, src) {
+            currentTitle = title || 'Game';
+            nowPlaying.textContent = 'Now Playing: ' + currentTitle;
+            menu.style.display = 'none';
+            gameContainer.style.display = 'block';
+            overlay.style.display = 'none';
+            escArmed = false;
+            // Load game
+            gameFrame.src = src || '';
+            // Focus game as soon as it paints
+            setTimeout(() => {
+                try {
+                    gameFrame.contentWindow && gameFrame.contentWindow.focus();
+                } catch (e) {}
+            }, 50);
+        }
+
+        document.querySelectorAll('.launch-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                launchGame(btn.dataset.title, btn.dataset.src);
+            });
+        });
+
+        // Leave / Resume
+        leaveBtn.addEventListener('click', () => {
+            // Clear iframe to stop audio/loops
+            gameFrame.src = 'about:blank';
+            gameContainer.style.display = 'none';
+            menu.style.display = 'block';
+            overlay.style.display = 'none';
+            escArmed = false;
+            currentTitle = '';
+        });
+        resumeBtn.addEventListener('click', () => {
+            overlay.style.display = 'none';
+            // attempt to refocus game
+            try {
+                gameFrame.contentWindow && gameFrame.contentWindow.focus();
+            } catch (e) {}
+        });
+
+        // ESC + hover top to reveal overlay
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && gameContainer.style.display === 'block') {
+                escArmed = true;
+            }
+        });
+
+        // Show overlay when ESC has been pressed and user hovers top strip
+        hoverStrip.addEventListener('mouseenter', () => {
+            if (escArmed && gameContainer.style.display === 'block') {
+                overlay.style.display = 'flex';
+            }
+        });
+
+        // Hide overlay when mouse leaves it and we are not interacting
+        let overlayHideTimeout = null;
+        overlay.addEventListener('mouseleave', () => {
+            // Slight delay to prevent flicker
+            clearTimeout(overlayHideTimeout);
+            overlayHideTimeout = setTimeout(() => {
+                overlay.style.display = 'none';
+                // keep ESC armed so user can open again quickly
+            }, 120);
+        });
+
+        // Also hide if user clicks back into the game area
+        gameFrame.addEventListener('load', () => {
+            // When content loads, try to focus and hide overlay
+            overlay.style.display = 'none';
+            setTimeout(() => {
+                try {
+                    gameFrame.contentWindow && gameFrame.contentWindow.focus();
+                } catch (e) {}
+            }, 30);
+        });
+
+        // Optional: press ESC while overlay is visible toggles it off
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && overlay.style.display === 'flex') {
+                overlay.style.display = 'none';
+            }
+        });
+
+        // Prevent scrolling the page while game is open (keep fullscreen feel)
+        function lockScroll(lock) {
+            if (lock) {
+                document.documentElement.style.overflow = 'hidden';
+                document.body.style.overflow = 'hidden';
+            } else {
+                document.documentElement.style.overflow = '';
+                document.body.style.overflow = '';
+            }
+        }
+        const observer = new MutationObserver(() => {
+            lockScroll(gameContainer.style.display === 'block');
+        });
+        observer.observe(gameContainer, {
+            attributes: true,
+            attributeFilter: ['style']
+        });
+
+        // Keyboard hint: if user presses Escape but misses hover, gently pulse the hover strip
+        function pulseStrip() {
+            hoverStrip.animate([{
+                background: 'transparent'
+            }, {
+                background: 'rgba(166,89,255,.25)'
+            }, {
+                background: 'transparent'
+            }], {
+                duration: 700,
+                iterations: 1
+            });
+        }
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && gameContainer.style.display === 'block') {
+                pulseStrip();
+            }
+        });
+
+        // Accessibility: close info modal with Escape
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && infoModal.style.display === 'grid') {
+                infoModal.style.display = 'none';
+            }
+        });
+    </script>
+</body>
+
+</html>
